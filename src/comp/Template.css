@@ -1,0 +1,393 @@
+
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { background: #f0ece4; }
+
+    .app-wrapper {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fdf8f2 0%, #f5ede0 100%);
+      font-family: 'EB Garamond', serif;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── APP TITLE BAR ── */
+    .app-title-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .app-title-main {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(10px, 2.5vw, 13px);
+      font-weight: 400;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #b08060;
+      display: block;
+    }
+
+    .app-title-sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(9px, 2vw, 11px);
+      font-weight: 300;
+      letter-spacing: 3px;
+      color: #c9906a;
+      font-style: italic;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .app-title-rule {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #c9906a, transparent);
+      margin: 8px auto 0;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      padding: 0 8px;
+    }
+
+    .btn {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(10px, 2.5vw, 12px);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-radius: 1px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-edit {
+      background: #fff;
+      border-color: #c9906a;
+      color: #c9906a;
+    }
+    .btn-edit:hover, .btn-edit:active { background: #c9906a; color: #fff; }
+
+    .btn-download {
+      background: #1a1a1a;
+      border-color: #1a1a1a;
+      color: #fff;
+    }
+    .btn-download:hover, .btn-download:active { background: #333; }
+
+    .btn-add {
+      background: #eaf4ea;
+      border-color: #6aaa6a;
+      color: #3a7a3a;
+      font-size: clamp(9px, 2vw, 11px);
+      padding: 7px 16px;
+    }
+    .btn-add:hover, .btn-add:active { background: #6aaa6a; color: #fff; }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #cc5555;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 6px;
+      line-height: 1;
+      flex-shrink: 0;
+      touch-action: manipulation;
+    }
+
+    /* ── INVOICE CARD ── */
+    .invoice-card {
+      background: #ffffff;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: clamp(24px, 6vw, 52px) clamp(18px, 6vw, 60px) clamp(24px, 5vw, 48px);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* ── BRAND HEADER ── */
+    .inv-header {
+      text-align: center;
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+      position: relative;
+    }
+
+    .inv-header-ornament {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(8px, 1.8vw, 10px);
+      font-weight: 300;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      color: #c9906a;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .inv-brand {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(22px, 7vw, 46px);
+      font-weight: 700;
+      letter-spacing: clamp(3px, 1.5vw, 8px);
+      line-height: 1;
+      display: block;
+    }
+
+    .inv-brand-highlight {
+      color: #e0206a;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: clamp(26px, 8vw, 52px);
+    }
+
+    .inv-brand-dark { color: #1a1a1a; }
+
+    .inv-brand-tagline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(9px, 2.2vw, 12px);
+      font-weight: 300;
+      letter-spacing: clamp(3px, 1.5vw, 7px);
+      text-transform: uppercase;
+      color: #888;
+      display: block;
+      margin-top: 6px;
+    }
+
+    .inv-header-rule-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .inv-header-rule {
+      flex: 1;
+      height: 1px;
+      background: #1a1a1a;
+    }
+
+    .inv-header-diamond {
+      width: 5px;
+      height: 5px;
+      background: #e0206a;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* Meta row */
+    .inv-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      font-size: clamp(12px, 3vw, 15px);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .inv-meta-left { font-weight: 600; flex: 1; min-width: 0; }
+    .inv-meta-right { text-align: right; flex-shrink: 0; }
+    .inv-meta-right .label { font-weight: 700; }
+
+    /* Section title */
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(13px, 3.5vw, 18px);
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: #e0206a;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    .section-title-rule {
+      flex: 1;
+      height: 1px;
+      background: #1a1a1a;
+    }
+
+    /* Table */
+    .inv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 28px;
+      font-size: clamp(11px, 2.8vw, 14.5px);
+    }
+
+    .inv-table th {
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      font-size: clamp(9px, 2.2vw, 12px);
+      letter-spacing: 1px;
+      text-align: left;
+      padding: 8px 6px 8px 0;
+      border-bottom: 1px solid #1a1a1a;
+      border-top: 1px solid #1a1a1a;
+    }
+
+    .inv-table th:not(:first-child),
+    .inv-table td:not(:first-child) {
+      text-align: right;
+    }
+
+    .inv-table td {
+      padding: 7px 6px 7px 0;
+      border-bottom: none;
+      color: #1a1a1a;
+      vertical-align: middle;
+    }
+
+    .inv-table tr.total-row td {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: clamp(10px, 2.5vw, 13px);
+      letter-spacing: 0.5px;
+      border-top: 1.5px solid #1a1a1a;
+      padding-top: 8px;
+    }
+
+    /* Editable inputs */
+    .editable-input {
+      width: 100%;
+      border: none;
+      border-bottom: 1px dashed #d4a574;
+      background: #fffdf8;
+      font-family: 'EB Garamond', serif;
+      font-size: clamp(12px, 3vw, 14.5px);
+      color: #1a1a1a;
+      padding: 2px 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .editable-input:focus { border-bottom-color: #e0206a; background: #fff8f5; }
+    .editable-input.right { text-align: right; }
+
+    .editable-meta {
+      border: none;
+      border-bottom: 1px dashed #d4a574;
+      background: transparent;
+      font-family: 'EB Garamond', serif;
+      font-size: clamp(13px, 3.2vw, 15px);
+      color: #1a1a1a;
+      font-weight: 600;
+      outline: none;
+      min-width: 120px;
+      max-width: 100%;
+      -webkit-appearance: none;
+    }
+    .editable-meta:focus { border-bottom-color: #e0206a; }
+    .editable-meta.right { text-align: right; font-weight: 400; }
+
+    /* Summary */
+    .inv-summary {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-bottom: 40px;
+    }
+
+    .summary-table {
+      width: min(280px, 100%);
+      font-size: clamp(13px, 3.2vw, 15px);
+    }
+
+    .summary-table td { padding: 4px 0; }
+    .summary-table td:last-child { text-align: right; }
+    .summary-table .summary-label { font-weight: 700; }
+
+    .summary-divider {
+      border: none;
+      border-top: 1.5px solid #1a1a1a;
+      margin: 4px 0;
+      width: 100%;
+    }
+
+    .summary-balance td {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(16px, 4.5vw, 20px);
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding-top: 6px;
+    }
+
+    /* Thank you */
+    .inv-thankyou {
+      text-align: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: clamp(13px, 3.5vw, 16px);
+      font-weight: 300;
+      color: #555;
+      letter-spacing: 1px;
+      margin-bottom: 24px;
+    }
+
+    /* Footer */
+    .inv-footer {
+      border-top: 1.5px solid #1a1a1a;
+      padding-top: 12px;
+      display: flex;
+      gap: 16px 32px;
+      font-size: clamp(11px, 2.5vw, 13.5px);
+      flex-wrap: wrap;
+    }
+
+    .inv-footer a, .inv-footer .link {
+      color: #2255cc;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .edit-hint {
+      text-align: center;
+      font-size: clamp(11px, 2.5vw, 12px);
+      color: #b08060;
+      margin-bottom: 10px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      letter-spacing: 1px;
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 480px) {
+      .inv-meta { flex-direction: column; gap: 8px; }
+      .inv-meta-right { text-align: left; }
+      .summary-table { width: 100%; }
+      .inv-footer { flex-direction: column; gap: 8px; }
+      .editable-meta { min-width: 100px; }
+      input[type="number"] { font-size: 16px; }
+    }
+
+    @media print {
+      @page { margin: 0.6in; size: A4; }
+      body { background: white !important; }
+      .app-title-bar, .controls, .edit-hint { display: none !important; }
+      .app-wrapper { padding: 0; background: white !important; }
+      .invoice-card { box-shadow: none; padding: 0; }
+      .btn-remove { display: none !important; }
+      .editable-input, .editable-meta {
+        border-bottom: none !important;
+        background: transparent !important;
+      }
+    }
+  
