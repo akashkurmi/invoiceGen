@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./App.css";
 import GayatriCollection from "./comp/Template/gayatriCollection.js";
 import AnjalMakeoverInvoice from "./comp/templateNewClaud.js";
