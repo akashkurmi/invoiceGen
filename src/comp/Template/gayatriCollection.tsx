@@ -71,9 +71,9 @@ export default function GayatriCollection() {
     const marginR = 20;
     const black: [number, number, number] = [0, 0, 0];
     const gold: [number, number, number] = [162, 112, 34];
-    const darkGold: [number, number, number] = [120, 80, 20];
+    // const darkGold: [number, number, number] = [120, 80, 20];
     const linkBlue: [number, number, number] = [34, 85, 204];
-    const lightGray: [number, number, number] = [240, 236, 228];
+    // const lightGray: [number, number, number] = [240, 236, 228];
 
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageW, pageH, "F");
