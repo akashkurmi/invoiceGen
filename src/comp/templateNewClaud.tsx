@@ -512,9 +512,9 @@ export default function InvoiceGenerator() {
             <table className="inv-table">
               <thead>
                 <tr>
-                  <th style={{ width: "64%", minWidth: "160px" }}>Service Category</th>
-                  <th style={{ width: "18%", minWidth: "80px" }}>Quantity</th>
-                  <th style={{ width: "18%", minWidth: "80px" }}>Total Price</th>
+                  <th style={{ width: "70%", minWidth: "180px" }}>Service Category</th>
+                  <th style={{ width: "15%", minWidth: "60px", textAlign: "right" }}>Quantity</th>
+                  <th style={{ width: "15%", minWidth: "70px", textAlign: "right" }}>Total Price</th>
                 </tr>
               </thead>
             <tbody>
@@ -556,7 +556,7 @@ export default function InvoiceGenerator() {
                         onChange={(e) =>
                           handleServiceChange(row.id, "qty", e.target.value)
                         }
-                        style={{ width: "90px" }}
+                        style={{ width: "60px" }}
                       />
                     ) : (
                       row.qty
@@ -575,7 +575,7 @@ export default function InvoiceGenerator() {
                             Number(e.target.value)
                           )
                         }
-                        style={{ width: "80px" }}
+                        style={{ width: "70px" }}
                       />
                     ) : (
                       Number(row.price).toLocaleString("en-IN")
