@@ -25,7 +25,7 @@ const defaultServices: Service[] = [
 
 export default function InvoiceGenerator() {
   const [client, setClient] = useState<string>(
-    "M/s Sneha Jain & Mr. Adarsh Jain"
+    "M/s/Mr."
   );
   const [dateRange, setDateRange] = useState<string>("March 10 - 11, 2026");
   const [venue, setVenue] = useState<string>("KK Palce, Khurai, MP");
