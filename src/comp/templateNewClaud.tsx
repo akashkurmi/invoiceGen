@@ -11,28 +11,44 @@ interface Service {
 
 const defaultServices: Service[] = [
   { id: 1, name: "Bridal Makeup", qty: "1 Look", price: 10000 },
-  { id: 2, name: "Bride Phere Makeup + Hairstyle", qty: "1 Look", price: 1500 },
-  { id: 3, name: "Haldi Makeup + Hairstyle", qty: "1 Look", price: 1500 },
-  { id: 4, name: "Sangeet Makeup + Hairstyle", qty: "1 Look", price: 1500 },
-  { id: 5, name: "Groom Makeup", qty: "1 Look", price: 4000 },
-  {
-    id: 6,
-    name: "Basic Makeup + Hairstyle (One Complementary)",
-    qty: "4 Looks",
-    price: 4500,
-  },
+];
+
+const serviceOptions = [
+  "Bridal Makeup",
+  "Bride Phere Makeup",
+  "Haldi Makeup",
+  "Engagement Makeup",
+  "Sangeet Makeup",
+  "Basic Makeup",
+  "Groom Makeup",
+  "Nude/Basic Makeup",
+  "Matte Makeup",
+  "HD Makeup",
+  "Dewy Makeup",
+  "Airbrush Makeup",
+  "Sweat Proof Makeup",
+  "3D Makeup",
+  "No Makeup Look",
+  "Glossy Makeup",
+  "Dramatic Makeup",
+  "Custom"
 ];
 
 export default function InvoiceGenerator() {
-  const [client, setClient] = useState<string>(
-    "M/s/Mr."
-  );
+  const [client, setClient] = useState<string>("M/s/Mr.");
+  const [phone, setPhone] = useState<string>("");
   const [dateRange, setDateRange] = useState<string>("March 10 - 11, 2026");
   const [venue, setVenue] = useState<string>("KK Palce, Khurai, MP");
   const [advance, setAdvance] = useState<number>(5000);
   const [services, setServices] = useState<Service[]>(defaultServices);
   const [editing, setEditing] = useState<boolean>(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+
+  // Popup state
+  const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
+  const [selectedDefaultService, setSelectedDefaultService] = useState<string>("Bridal Makeup");
+  const [customServiceName, setCustomServiceName] = useState<string>("");
+  const [includeHairstyle, setIncludeHairstyle] = useState<boolean>(false);
 
   const totalAmount: number = services.reduce((s, r) => s + Number(r.price), 0);
   const balance: number = totalAmount - Number(advance);
@@ -56,6 +72,28 @@ export default function InvoiceGenerator() {
       ...services,
       { id: Date.now(), name: "", qty: "1 Look", price: 0 },
     ]);
+  };
+
+  const handleAddServiceSubmit = () => {
+    let finalName = selectedDefaultService === "Custom" ? customServiceName : selectedDefaultService;
+    if (includeHairstyle && !finalName.includes("Hairstyle")) {
+       finalName += " + Hairstyle";
+    }
+
+    let defaultPrice = 0;
+    if (selectedDefaultService !== "Custom") {
+       const found = defaultServices.find(s => s.name.includes(selectedDefaultService));
+       if (found) defaultPrice = found.price;
+    }
+
+    setServices([
+      ...services,
+      { id: Date.now(), name: finalName, qty: "1 Look", price: defaultPrice },
+    ]);
+    setShowAddPopup(false);
+    setSelectedDefaultService("Bridal Makeup");
+    setCustomServiceName("");
+    setIncludeHairstyle(false);
   };
 
   const removeRow = (id: number): void => {
@@ -119,7 +157,13 @@ export default function InvoiceGenerator() {
     doc.setTextColor(...black);
     doc.text("Client:", marginL, y);
     doc.setFont("helvetica", "normal");
-    doc.text(` ${client}`, marginL + doc.getTextWidth("Client:"), y);
+    doc.text(`   ${client}`, marginL + doc.getTextWidth("Client:"), y);
+
+    const yPhone = y + 6;
+    doc.setFont("helvetica", "bold");
+    doc.text("Phn No.:", marginL, yPhone);
+    doc.setFont("helvetica", "normal");
+    doc.text(`   ${phone || "—"}`, marginL + doc.getTextWidth("Phn No.:"), yPhone);
 
     // Date + Venue right side
     const rightX = pageW - marginR;
@@ -303,7 +347,79 @@ export default function InvoiceGenerator() {
           <button className="btn btn-download" onClick={generatePDF}>
             ⬇ Download PDF
           </button>
+          <button 
+            className="btn" 
+            style={{ background: "#f0f0f0", color: "#1a1a1a", borderColor: "#ccc" }} 
+            onClick={() => setShowAddPopup(true)}
+          >
+            + Add Service
+          </button>
         </div>
+
+        {showAddPopup && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
+            justifyContent: "center", alignItems: "center", zIndex: 1000
+          }}>
+            <div style={{
+              background: "#fff", padding: "24px", borderRadius: "8px",
+              width: "90%", maxWidth: "400px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              display: "flex", flexDirection: "column", gap: "16px",
+              fontFamily: "'Helvetica Neue', sans-serif", color: "#1a1a1a"
+            }}>
+              <h3 style={{ margin: 0, color: "#1a1a1a" }}>Add New Service</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: "bold" }}>Service Name</label>
+                <select 
+                  value={selectedDefaultService} 
+                  onChange={(e) => setSelectedDefaultService(e.target.value)}
+                  style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "14px" }}
+                >
+                  {serviceOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+
+              {selectedDefaultService === "Custom" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: "bold" }}>Custom Service</label>
+                  <input 
+                    value={customServiceName} 
+                    onChange={(e) => setCustomServiceName(e.target.value)}
+                    placeholder="Enter custom service"
+                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "14px" }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input 
+                  type="checkbox" 
+                  id="includeHairstyle"
+                  checked={includeHairstyle} 
+                  onChange={(e) => setIncludeHairstyle(e.target.checked)} 
+                />
+                <label htmlFor="includeHairstyle" style={{ fontSize: "14px" }}>Include Hairstyle (+ Hairstyle)</label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                <button 
+                  onClick={() => setShowAddPopup(false)}
+                  style={{ padding: "8px 16px", background: "#f0f0f0", border: "1px solid #ccc", borderRadius: "4px", cursor: "pointer", color: "#1a1a1a" }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleAddServiceSubmit}
+                  style={{ padding: "8px 16px", background: "#e0206a", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {editing && <p className="edit-hint">Click any field to edit it</p>}
 
@@ -329,47 +445,61 @@ export default function InvoiceGenerator() {
 
           {/* ── META ── */}
           <div className="inv-meta">
-            <div className="inv-meta-left">
-              <span className="label" style={{ fontWeight: 700 }}>
-                Client:&nbsp;
-              </span>
+            <div className="inv-meta-row">
+              <span className="inv-meta-label">Client</span>
               {editing ? (
                 <input
                   className="editable-meta"
                   value={client}
                   onChange={(e) => setClient(e.target.value)}
+                  placeholder="Client name"
                 />
               ) : (
-                client
+                <span className="inv-meta-value">{client}</span>
               )}
             </div>
-            <div className="inv-meta-right">
-              <div>
-                <span className="label">Date:&nbsp;</span>
-                {editing ? (
-                  <input
-                    className="editable-meta right"
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
-                    style={{ width: 160 }}
-                  />
-                ) : (
-                  dateRange
-                )}
-              </div>
-              <div>
-                <span className="label">Venue:&nbsp;</span>
-                {editing ? (
-                  <input
-                    className="editable-meta right"
-                    value={venue}
-                    onChange={(e) => setVenue(e.target.value)}
-                    style={{ width: 160 }}
-                  />
-                ) : (
-                  venue
-                )}
-              </div>
+
+            <div className="inv-meta-row">
+              <span className="inv-meta-label">Date</span>
+              {editing ? (
+                <input
+                  className="editable-meta"
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value)}
+                  placeholder="Date range"
+                />
+              ) : (
+                <span className="inv-meta-value">{dateRange}</span>
+              )}
+            </div>
+
+            <div className="inv-meta-row">
+              <span className="inv-meta-label">Phn No.</span>
+              {editing ? (
+                <input
+                  className="editable-meta"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 00000 00000"
+                />
+              ) : (
+                <span className="inv-meta-value">{phone || "—"}</span>
+              )}
+            </div>
+
+            <div className="inv-meta-row">
+              <span className="inv-meta-label">Venue</span>
+              {editing ? (
+                <input
+                  className="editable-meta"
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  placeholder="Venue"
+                />
+              ) : (
+                <span className="inv-meta-value">{venue}</span>
+              )}
             </div>
           </div>
 
@@ -378,14 +508,15 @@ export default function InvoiceGenerator() {
             Services
             <span className="section-title-rule" />
           </div>
-          <table className="inv-table">
-            <thead>
-              <tr>
-                <th style={{ width: "64%" }}>Service Category</th>
-                <th style={{ width: "18%" }}>Quantity</th>
-                <th style={{ width: "18%" }}>Total Price</th>
-              </tr>
-            </thead>
+          <div style={{ overflowX: "auto", margin: "0 -8px", padding: "0 8px" }}>
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "64%", minWidth: "160px" }}>Service Category</th>
+                  <th style={{ width: "18%", minWidth: "80px" }}>Quantity</th>
+                  <th style={{ width: "18%", minWidth: "80px" }}>Total Price</th>
+                </tr>
+              </thead>
             <tbody>
               {services.map((row: Service) => (
                 <tr key={row.id}>
@@ -467,7 +598,8 @@ export default function InvoiceGenerator() {
                 <td>{totalAmount.toLocaleString("en-IN")}</td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {/* ── SUMMARY ── */}
           <div className="inv-summary">

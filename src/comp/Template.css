@@ -183,18 +183,35 @@
 
     /* Meta row */
     .inv-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 20px;
       margin-bottom: 28px;
       font-size: clamp(12px, 3vw, 15px);
-      gap: 12px;
-      flex-wrap: wrap;
     }
 
-    .inv-meta-left { font-weight: 600; flex: 1; min-width: 0; }
-    .inv-meta-right { text-align: right; flex-shrink: 0; }
-    .inv-meta-right .label { font-weight: 700; }
+    .inv-meta-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .inv-meta-row.full-width { grid-column: span 2; }
+
+    .inv-meta-label {
+      font-size: clamp(9px, 2vw, 10px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #e0206a;
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+    }
+
+    .inv-meta-value {
+      font-weight: 600;
+      color: #1a1a1a;
+      word-break: break-word;
+    }
 
     /* Section title */
     .section-title {
@@ -291,12 +308,11 @@
       color: #1a1a1a;
       font-weight: 600;
       outline: none;
-      min-width: 120px;
-      max-width: 100%;
+      width: 100%;
+      padding: 2px 0;
       -webkit-appearance: none;
     }
     .editable-meta:focus { border-bottom-color: #e0206a; }
-    .editable-meta.right { text-align: right; font-weight: 400; }
 
     /* Summary */
     .inv-summary {
@@ -370,12 +386,15 @@
 
     /* Mobile tweaks */
     @media (max-width: 480px) {
-      .inv-meta { flex-direction: column; gap: 8px; }
-      .inv-meta-right { text-align: left; }
+      .inv-meta { grid-template-columns: 1fr; gap: 12px; }
+      .inv-meta-row.full-width { grid-column: span 1; }
       .summary-table { width: 100%; }
       .inv-footer { flex-direction: column; gap: 8px; }
-      .editable-meta { min-width: 100px; }
-      input[type="number"] { font-size: 16px; }
+      .editable-meta { min-width: 100px; width: 100%; }
+      input[type="number"], input[type="text"], input[type="date"], select { font-size: 16px; }
+      
+      .controls { flex-direction: column; align-items: stretch; width: 100%; }
+      .btn { width: 100%; text-align: center; }
     }
 
     @media print {
