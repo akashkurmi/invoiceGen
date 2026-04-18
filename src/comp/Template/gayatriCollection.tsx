@@ -9,21 +9,16 @@ interface Item {
 }
 
 const defaultItems: Item[] = [
-  { id: 1, name: "Bridal Lehenga", qty: "1 Pc", price: 15000 },
-  { id: 2, name: "Groom Sherwani", qty: "1 Pc", price: 8000 },
-  { id: 3, name: "Haldi Outfit", qty: "1 Pc", price: 3000 },
-  { id: 4, name: "Sangeet Lehenga", qty: "1 Pc", price: 5000 },
-  { id: 5, name: "Dupatta & Accessories", qty: "1 Set", price: 2500 },
+  { id: 1, name: "Bridal Lehenga", qty: "1 Pc", price: 1500 },
 ];
 
 export default function GayatriCollection() {
-  const [client, setClient] = useState<string>(
-    "M/s Sneha Jain & Mr. Adarsh Jain"
-  );
+  const [client, setClient] = useState<string>("M/s/Mr. ");
   const [pickupDate, setPickupDate] = useState<string>("");
   const [returnDate, setReturnDate] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
-  const [advance, setAdvance] = useState<number>(5000);
+  const [address, setAddress] = useState<string>("");
+  const [advance, setAdvance] = useState<number>(500);
   const [items, setItems] = useState<Item[]>(defaultItems);
   const [editing, setEditing] = useState<boolean>(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -135,15 +130,21 @@ export default function GayatriCollection() {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...black);
-    doc.text("Client:", marginL, y);
+    doc.text("Name:", marginL, y);
     doc.setFont("helvetica", "normal");
-    doc.text(` ${client}`, marginL + doc.getTextWidth("Client:"), y);
+    doc.text(`   ${client}`, marginL + doc.getTextWidth("Name:"), y);
 
     const y2 = y + 6;
     doc.setFont("helvetica", "bold");
     doc.text("Phn No.:", marginL, y2);
     doc.setFont("helvetica", "normal");
-    doc.text(` ${phone || "—"}`, marginL + doc.getTextWidth("Phn No.:"), y2);
+    doc.text(`   ${phone || "—"}`, marginL + doc.getTextWidth("Phn No.:"), y2);
+
+    const y3 = y2 + 6;
+    doc.setFont("helvetica", "bold");
+    doc.text("Address:", marginL, y3);
+    doc.setFont("helvetica", "normal");
+    doc.text(`   ${address || "—"}`, marginL + doc.getTextWidth("Address:"), y3);
 
     // Right col: Pick-up Date + Return Date
     const rightX = pageW - marginR;
@@ -163,7 +164,7 @@ export default function GayatriCollection() {
     doc.text(retVal, rightX - doc.getTextWidth(retVal), y2);
 
     // Thin separator rule
-    y = y2 + 7;
+    y = y3 + 7;
     doc.setDrawColor(...black);
     doc.setLineWidth(0.3);
     doc.line(marginL, y, pageW - marginR, y);
@@ -656,6 +657,7 @@ export default function GayatriCollection() {
           .gc-btn-remove { display: none !important; }
           .gc-editable, .gc-meta-input { border-bottom: none !important; background: transparent !important; }
         }
+        .gc-meta-row.full-width { grid-column: span 2; }
       `}</style>
 
       <div className="gc-wrapper">
@@ -701,15 +703,15 @@ export default function GayatriCollection() {
 
           {/* ── META ── */}
           <div className="gc-meta">
-            {/* Client */}
+            {/* Name */}
             <div className="gc-meta-row">
-              <span className="gc-meta-label">Client</span>
+              <span className="gc-meta-label">Name</span>
               {editing ? (
                 <input
                   className="gc-meta-input"
                   value={client}
                   onChange={(e) => setClient(e.target.value)}
-                  placeholder="Client name"
+                  placeholder="Name"
                 />
               ) : (
                 <span className="gc-meta-value">{client}</span>
@@ -759,6 +761,21 @@ export default function GayatriCollection() {
                 />
               ) : (
                 <span className="gc-meta-value">{fmtDate(returnDate)}</span>
+              )}
+            </div>
+
+            {/* Address */}
+            <div className="gc-meta-row full-width">
+              <span className="gc-meta-label">Address</span>
+              {editing ? (
+                <input
+                  className="gc-meta-input"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter full address"
+                />
+              ) : (
+                <span className="gc-meta-value">{address || "—"}</span>
               )}
             </div>
           </div>
