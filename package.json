@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@react-pdf/renderer": "^4.3.2",
+    "dotenv": "^17.4.2",
     "jspdf": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
