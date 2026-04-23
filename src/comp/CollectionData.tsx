@@ -5,7 +5,7 @@ interface Outfit {
   name: string;
   purchaseValue: number;
 }
-
+// collection
 const mockOutfits: Outfit[] = [
   { id: 1, name: "Bridal Lehenga - Crimson Red", purchaseValue: 45000 },
   { id: 2, name: "Saree - Gold Zari", purchaseValue: 12000 },
