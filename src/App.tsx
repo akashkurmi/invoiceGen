@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import GayatriCollection from "./comp/Template/gayatriCollection.js";
 import AnjalMakeoverInvoice from "./comp/templateNewClaud.js";
+import CollectionData from "./comp/CollectionData.js";
 
 function App() {
   // 1. Initialize state to keep track of the selected component
@@ -19,6 +20,7 @@ function App() {
         >
           <option value="Gayatri">Gayatri Collection</option>
           <option value="Anjal">Anjal Makeover</option>
+          <option value="CollectionData">Collection Data</option>
         </select>
       </div>
 
@@ -28,6 +30,7 @@ function App() {
       <div className="display-area">
         {selectedTemplate === "Gayatri" && <GayatriCollection />}
         {selectedTemplate === "Anjal" && <AnjalMakeoverInvoice />}
+        {selectedTemplate === "CollectionData" && <CollectionData />}
       </div>
     </div>
   );

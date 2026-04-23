@@ -641,11 +641,8 @@ export default function GayatriCollection() {
           letter-spacing: 1px;
         }
 
-        .gc-meta-row.full-width { grid-column: span 2; }
-
         @media (max-width: 480px) {
           .gc-meta { grid-template-columns: 1fr; }
-          .gc-meta-row.full-width { grid-column: span 1; }
           .gc-summary-table { width: 100%; }
           .gc-footer { flex-direction: column; gap: 8px; }
           input[type="number"], input[type="tel"], input[type="date"] { font-size: 16px; }
@@ -660,6 +657,7 @@ export default function GayatriCollection() {
           .gc-btn-remove { display: none !important; }
           .gc-editable, .gc-meta-input { border-bottom: none !important; background: transparent !important; }
         }
+        .gc-meta-row.full-width { grid-column: span 2; }
       `}</style>
 
       <div className="gc-wrapper">

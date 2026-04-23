@@ -658,7 +658,7 @@ export default function InvoiceGenerator() {
               <strong>Leave us a Review:</strong>{" "}
               <a
                 className="link"
-                href="https://g.page/r/review"
+                href="https://g.page/r/CX9fivISCCmvEBM/review"
                 target="_blank"
                 rel="noreferrer"
               >
