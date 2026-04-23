@@ -19,7 +19,7 @@ function App() {
           onChange={(e) => setSelectedTemplate(e.target.value)}
         >
           <option value="Gayatri">Gayatri Collection</option>
-          <option value="Anjal">Anjal Makeover</option>
+          <option value="Anjali">Anjali Makeover</option>
           <option value="CollectionData">Collection Data</option>
         </select>
       </div>
@@ -29,7 +29,7 @@ function App() {
       {/* 3. Conditionally render the selected component */}
       <div className="display-area">
         {selectedTemplate === "Gayatri" && <GayatriCollection />}
-        {selectedTemplate === "Anjal" && <AnjalMakeoverInvoice />}
+        {selectedTemplate === "Anjali" && <AnjalMakeoverInvoice />}
         {selectedTemplate === "CollectionData" && <CollectionData />}
       </div>
     </div>

@@ -237,6 +237,7 @@ export default function CollectionData() {
   );
 
   const totalGrossOverall = data.reduce((sum, r) => sum + r.price, 0);
+  const totalInvested = outfits.reduce((sum, o) => sum + (o.purchaseValue || 0), 0);
 
   const outfitStats = outfits.map(outfit => {
     const rentals = data.filter(r => r.outfit === outfit.name);
@@ -272,21 +273,12 @@ export default function CollectionData() {
         
         /* Mobile styling */
         @media (max-width: 768px) {
-          .cd-container { padding: 16px; }
-          .cd-controls { flex-direction: column; align-items: stretch; }
+          .cd-container { padding: 12px 4px; }
+          .cd-controls { flex-direction: column; align-items: stretch; padding: 0 8px; }
+          .cd-header { padding: 0 8px; }
           .cd-search { max-width: 100%; }
           .cd-btn-add { width: 100%; text-align: center; }
-          
-          /* Convert table to cards on mobile */
-          .cd-table-wrap { border: none; background: transparent; box-shadow: none; min-width: auto; overflow-x: visible; }
-          .cd-table, .cd-table tbody, .cd-table tr, .cd-table td { display: block; width: 100%; }
-          .cd-table thead { display: none; }
-          .cd-table tr { background: #fff; border: 1px solid #eee; border-radius: 8px; margin-bottom: 16px; padding: 16px; padding-top: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; }
-          .cd-table td { padding: 8px 0; border: none; display: flex; justify-content: space-between; align-items: center; text-align: right; }
-          .cd-table td::before { content: attr(data-label); font-family: 'Cinzel', serif; font-weight: 600; color: #1a1a1a; text-align: left; margin-right: 16px; flex-shrink: 0; }
-          
-          .cd-table td.actions-cell { display: block; position: absolute; top: 8px; right: 8px; padding: 0; width: auto; }
-          .cd-table td.actions-cell::before { display: none; }
+          .cd-table-wrap, .cd-outfit-wrap { border-radius: 0; border-left: none; border-right: none; }
         }
       `}</style>
       <div className="cd-header">
@@ -300,13 +292,19 @@ export default function CollectionData() {
           <button onClick={() => setShowAddOutfitPopup(true)} style={{ padding: "6px 12px", background: "#fff", border: "1px solid #a27022", borderRadius: "4px", color: "#a27022", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "14px" }}>+ Add Outfit</button>
         </div>
         
-        <div style={{ marginBottom: "24px" }}>
-          <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Gross Overall</h4>
-          <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>₹{totalGrossOverall}</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: "48px", marginBottom: "32px", flexWrap: "wrap", textAlign: "center" }}>
+          <div>
+            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Gross Overall</h4>
+            <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>₹{totalGrossOverall}</p>
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Invested</h4>
+            <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>₹{totalInvested}</p>
+          </div>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "500px" }}>
+        <div className="cd-outfit-wrap" style={{ overflowX: "auto" }}>
+          <table className="cd-outfit-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "500px" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #e0d5c1", textAlign: "left" }}>
                 <th style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Outfit Name</th>
@@ -318,10 +316,10 @@ export default function CollectionData() {
             <tbody>
               {outfitStats.map(stats => (
                 <tr key={stats.name} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", fontWeight: 600, color: "#1a1a1a" }}>{stats.name}</td>
-                  <td style={{ padding: "12px 8px", color: "#666" }}>{stats.purchaseValue > 0 ? `₹${stats.purchaseValue}` : '-'}</td>
-                  <td style={{ padding: "12px 8px", color: "#1a1a1a", textAlign: "center", fontWeight: "bold" }}>{stats.count}</td>
-                  <td style={{ padding: "12px 8px", color: "#333", textAlign: "right", fontWeight: "bold" }}>₹{stats.gross}</td>
+                  <td data-label="Outfit Name" style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", fontWeight: 600, color: "#1a1a1a" }}>{stats.name}</td>
+                  <td data-label="Purchase Value" style={{ padding: "12px 8px", color: "#666" }}>{stats.purchaseValue > 0 ? `₹${stats.purchaseValue}` : '-'}</td>
+                  <td data-label="Times Rented" style={{ padding: "12px 8px", color: "#1a1a1a", textAlign: "center", fontWeight: "bold" }}>{stats.count}</td>
+                  <td data-label="Total Gross" style={{ padding: "12px 8px", color: "#333", textAlign: "right", fontWeight: "bold" }}>₹{stats.gross}</td>
                 </tr>
               ))}
             </tbody>

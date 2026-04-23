@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import jsPDF from "jspdf";
 
 interface Item {
@@ -6,6 +6,12 @@ interface Item {
   name: string;
   qty: string;
   price: number;
+}
+
+interface Outfit {
+  id: number;
+  name: string;
+  purchaseValue: number;
 }
 
 const defaultItems: Item[] = [
@@ -22,6 +28,37 @@ export default function GayatriCollection() {
   const [items, setItems] = useState<Item[]>(defaultItems);
   const [editing, setEditing] = useState<boolean>(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+
+  const [showAddPopup, setShowAddPopup] = useState(false);
+  const [outfits, setOutfits] = useState<Outfit[]>([]);
+  const [selectedOutfitId, setSelectedOutfitId] = useState<string>("");
+
+  useEffect(() => {
+    fetch('/api/outfits')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setOutfits(data);
+          if (data.length > 0) setSelectedOutfitId(data[0].id.toString());
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleAddOutfit = () => {
+    if (selectedOutfitId === "custom") {
+      setItems([...items, { id: Date.now(), name: "", qty: "1 Pc", price: 0 }]);
+    } else {
+      const outfit = outfits.find(o => o.id.toString() === selectedOutfitId);
+      if (outfit) {
+        setItems([
+          ...items,
+          { id: Date.now(), name: outfit.name, qty: "1 Pc", price: 0 }
+        ]);
+      }
+    }
+    setShowAddPopup(false);
+  };
 
   const totalAmount: number = items.reduce((s, r) => s + Number(r.price), 0);
   const balance: number = totalAmount - Number(advance);
@@ -679,7 +716,55 @@ export default function GayatriCollection() {
           <button className="gc-btn gc-btn-download" onClick={generatePDF}>
             ⬇ Download PDF
           </button>
+          <button 
+            className="gc-btn" 
+            style={{ background: "#f0f0f0", color: "#1a1a1a", borderColor: "#ccc" }} 
+            onClick={() => setShowAddPopup(true)}
+          >
+            + Add Outfit
+          </button>
         </div>
+
+        {showAddPopup && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
+            justifyContent: "center", alignItems: "center", zIndex: 1000
+          }}>
+            <div style={{
+              background: "#fff", padding: "24px", borderRadius: "8px",
+              width: "90%", maxWidth: "400px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              display: "flex", flexDirection: "column", gap: "16px",
+              fontFamily: "'Helvetica Neue', sans-serif", color: "#1a1a1a"
+            }}>
+              <h3 style={{ margin: 0, color: "#1a1a1a", fontFamily: "'Cinzel', serif" }}>Select Outfit</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: "bold" }}>Outfit Name</label>
+                <select 
+                  value={selectedOutfitId} 
+                  onChange={(e) => setSelectedOutfitId(e.target.value)}
+                  style={{ padding: "8px", borderRadius: "4px", border: "1px solid #ccc", fontSize: "14px", fontFamily: "inherit" }}
+                >
+                  <option value="" disabled>Select an outfit from collection...</option>
+                  {outfits.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
+                  <option value="custom">-- Add Custom Outfit --</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <button 
+                  onClick={() => setShowAddPopup(false)}
+                  style={{ flex: 1, padding: "10px", background: "#f0f0f0", color: "#333", border: "1px solid #ccc", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontFamily: "inherit" }}
+                >Cancel</button>
+                <button 
+                  onClick={handleAddOutfit}
+                  style={{ flex: 1, padding: "10px", background: "#a27022", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold", fontFamily: "inherit" }}
+                >Add Outfit</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {editing && <p className="gc-edit-hint">Click any field to edit it</p>}
 
