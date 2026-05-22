@@ -120,6 +120,7 @@ export default function CollectionData() {
   const [newAdvance, setNewAdvance] = useState<number>(0);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'edit' | 'delete', recordId: number, record?: RentalRecord } | null>(null);
 
   const handleAddRentalSubmit = async () => {
     if (!newMemberName || !newOutfit) return;
@@ -183,28 +184,41 @@ export default function CollectionData() {
     setNewAdvance(0);
   };
 
-  const handleEdit = (record: RentalRecord) => {
-    setEditingId(record.id);
-    setNewMemberName(record.memberName);
-    setNewPhone(record.phone);
-    setNewOutfit(record.outfit);
-    setNewRentDate(record.rentDate);
-    setNewReturnDate(record.returnDate);
-    setNewStatus(record.status);
-    setNewPrice(record.price);
-    setNewAdvance(record.advance);
+  const handleEditClick = (record: RentalRecord) => {
+    setConfirmAction({ type: 'edit', recordId: record.id, record });
     setActiveMenuId(null);
-    setShowAddPopup(true);
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      await fetch(`/api/rentals?id=${id}`, { method: 'DELETE' });
-    } catch (e) {
-      console.error(e);
-    }
-    setData(data.filter(r => r.id !== id));
+  const handleDeleteClick = (record: RentalRecord) => {
+    setConfirmAction({ type: 'delete', recordId: record.id });
     setActiveMenuId(null);
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
+    
+    if (confirmAction.type === 'edit') {
+      const record = confirmAction.record!;
+      setEditingId(record.id);
+      setNewMemberName(record.memberName);
+      setNewPhone(record.phone);
+      setNewOutfit(record.outfit);
+      setNewRentDate(record.rentDate);
+      setNewReturnDate(record.returnDate);
+      setNewStatus(record.status);
+      setNewPrice(record.price);
+      setNewAdvance(record.advance);
+      setShowAddPopup(true);
+    } else if (confirmAction.type === 'delete') {
+      const id = confirmAction.recordId;
+      try {
+        await fetch(`/api/rentals?id=${id}`, { method: 'DELETE' });
+      } catch (e) {
+        console.error(e);
+      }
+      setData(data.filter(r => r.id !== id));
+    }
+    setConfirmAction(null);
   };
 
   const handleAddOutfitSubmit = async () => {
@@ -405,8 +419,8 @@ export default function CollectionData() {
                         boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
                         display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
                       }}>
-                        <button onClick={() => handleEdit(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
-                        <button onClick={() => handleDelete(record.id)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
+                        <button onClick={() => handleEditClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
+                        <button onClick={() => handleDeleteClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
                       </div>
                     )}
                   </td>
@@ -527,6 +541,65 @@ export default function CollectionData() {
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
               <button onClick={() => setShowAddOutfitPopup(false)} style={{ padding: "8px 16px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "2px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Cancel</button>
               <button onClick={handleAddOutfitSubmit} style={{ padding: "8px 16px", background: "#a27022", color: "#fff", border: "none", borderRadius: "2px", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Add Outfit</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmAction && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.6)", display: "flex",
+          justifyContent: "center", alignItems: "center", zIndex: 1100,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#fff", padding: "32px", borderRadius: "12px",
+            width: "90%", maxWidth: "400px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            fontFamily: "'EB Garamond', serif", color: "#1a1a1a", textAlign: "center"
+          }}>
+            <div style={{
+              width: "60px", height: "60px", borderRadius: "50%",
+              background: confirmAction.type === 'delete' ? "#feecec" : "#fcf9f2",
+              color: confirmAction.type === 'delete' ? "#cc5555" : "#a27022",
+              display: "flex", justifyContent: "center", alignItems: "center",
+              fontSize: "28px", marginBottom: "16px"
+            }}>
+              {confirmAction.type === 'delete' ? "!" : "?"}
+            </div>
+            
+            <h3 style={{ margin: "0 0 12px 0", color: "#1a1a1a", fontFamily: "'Cinzel', serif", fontSize: "22px", fontWeight: 600 }}>
+              {confirmAction.type === 'delete' ? "Confirm Deletion" : "Confirm Edit"}
+            </h3>
+            
+            <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
+              {confirmAction.type === 'delete' 
+                ? "Are you sure you want to delete this record? This action cannot be undone." 
+                : "Are you sure you want to proceed with editing this record?"}
+            </p>
+            
+            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+              <button 
+                onClick={() => setConfirmAction(null)} 
+                style={{ 
+                  flex: 1, padding: "12px", background: "#f5f5f5", border: "none", 
+                  borderRadius: "6px", cursor: "pointer", color: "#555", 
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" 
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeConfirmAction} 
+                style={{ 
+                  flex: 1, padding: "12px", 
+                  background: confirmAction.type === 'delete' ? "#cc5555" : "#a27022", 
+                  color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", 
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" 
+                }}
+              >
+                {confirmAction.type === 'delete' ? "Delete" : "Proceed"}
+              </button>
             </div>
           </div>
         </div>
