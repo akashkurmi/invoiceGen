@@ -3,6 +3,7 @@ import "./App.css";
 import GayatriCollection from "./comp/Template/gayatriCollection.js";
 import AnjalMakeoverInvoice from "./comp/templateNewClaud.js";
 import CollectionData from "./comp/CollectionData.js";
+import MakeupData from "./comp/MakeupData.js";
 
 function App() {
   // 1. Initialize state to keep track of the selected component
@@ -21,6 +22,7 @@ function App() {
           <option value="Gayatri">Gayatri Collection</option>
           <option value="Anjali">Anjali Makeover</option>
           <option value="CollectionData">Collection Data</option>
+          <option value="MakeupData">Makeup Bookings Data</option>
         </select>
       </div>
 
@@ -31,6 +33,7 @@ function App() {
         {selectedTemplate === "Gayatri" && <GayatriCollection />}
         {selectedTemplate === "Anjali" && <AnjalMakeoverInvoice />}
         {selectedTemplate === "CollectionData" && <CollectionData />}
+        {selectedTemplate === "MakeupData" && <MakeupData />}
       </div>
     </div>
   );

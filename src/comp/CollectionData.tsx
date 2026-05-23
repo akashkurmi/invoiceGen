@@ -26,17 +26,6 @@ interface RentalRecord {
 
 const mockData: RentalRecord[] = [
   {
-    id: 1,
-    memberName: "Ayesha Khan",
-    phone: "+91 98765 43210",
-    outfit: "Bridal Lehenga - Crimson Red",
-    rentDate: "2026-04-10",
-    returnDate: "2026-04-15",
-    status: 'Returned',
-    price: 4500,
-    advance: 2000
-  },
-  {
     id: 2,
     memberName: "Priya Sharma",
     phone: "+91 87654 32109",
@@ -289,6 +278,10 @@ export default function CollectionData() {
     <div className="cd-container">
       <style>{`
         .cd-container { padding: 24px; max-width: 1000px; margin: 0 auto; font-family: 'EB Garamond', serif; }
+        .cd-form-row { display: flex; gap: 12px; }
+        @media (max-width: 600px) {
+          .cd-form-row { flex-direction: column; gap: 12px; }
+        }
         .cd-header { text-align: center; margin-bottom: 32px; }
         .cd-title { font-family: 'Cinzel', serif; color: #a27022; font-size: 32px; margin: 0; }
         .cd-subtitle { color: #666; font-style: italic; margin-top: 8px; }
@@ -504,7 +497,7 @@ export default function CollectionData() {
                     </select>
                   </div>
 
-                  <div style={{ display: "flex", gap: "12px" }}>
+                  <div className="cd-form-row">
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                       <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Rent Date</label>
                       <input type="date" value={item.rentDate} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, rentDate: e.target.value } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
@@ -515,7 +508,7 @@ export default function CollectionData() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: "12px" }}>
+                  <div className="cd-form-row">
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                       <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Price (₹)</label>
                       <input type="number" value={item.price} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, price: Number(e.target.value) } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />

@@ -385,7 +385,7 @@
     }
 
     /* Mobile tweaks */
-    @media (max-width: 480px) {
+    @media (max-width: 600px) {
       .inv-meta { grid-template-columns: 1fr; gap: 12px; }
       .inv-meta-row.full-width { grid-column: span 1; }
       .summary-table { width: 100%; }
