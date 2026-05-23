@@ -71,6 +71,16 @@ const mockData: RentalRecord[] = [
   }
 ];
 
+interface NewRentalItem {
+  id: string;
+  outfit: string;
+  rentDate: string;
+  returnDate: string;
+  price: number;
+  advance: number;
+  status: 'Rented' | 'Returned' | 'Overdue';
+}
+
 export default function CollectionData() {
   const [data, setData] = useState<RentalRecord[]>([]);
   const [outfits, setOutfits] = useState<Outfit[]>([]);
@@ -112,30 +122,28 @@ export default function CollectionData() {
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [newOutfit, setNewOutfit] = useState("");
-  const [newRentDate, setNewRentDate] = useState("");
-  const [newReturnDate, setNewReturnDate] = useState("");
-  const [newStatus, setNewStatus] = useState<'Rented' | 'Returned' | 'Overdue'>("Rented");
-  const [newPrice, setNewPrice] = useState<number>(0);
-  const [newAdvance, setNewAdvance] = useState<number>(0);
+  const [newItems, setNewItems] = useState<NewRentalItem[]>([
+    { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }
+  ]);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'edit' | 'delete', recordId: number, record?: RentalRecord } | null>(null);
 
   const handleAddRentalSubmit = async () => {
-    if (!newMemberName || !newOutfit) return;
+    if (!newMemberName || newItems.some(i => !i.outfit)) return;
     
-    const payload = {
-      memberName: newMemberName,
-      phone: newPhone,
-      outfit: newOutfit,
-      rentDate: newRentDate,
-      returnDate: newReturnDate,
-      status: newStatus,
-      price: newPrice,
-      advance: newAdvance
-    };
-
     if (editingId) {
+      const item = newItems[0];
+      const payload = {
+        memberName: newMemberName,
+        phone: newPhone,
+        outfit: item.outfit,
+        rentDate: item.rentDate,
+        returnDate: item.returnDate,
+        status: item.status,
+        price: item.price,
+        advance: item.advance
+      };
       try {
         const res = await fetch('/api/rentals', {
           method: 'PUT',
@@ -146,65 +154,89 @@ export default function CollectionData() {
           const updatedRecord = await res.json();
           setData(data.map(record => record.id === editingId ? updatedRecord : record));
         } else {
-          // Fallback if API fails
           setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
         }
       } catch (e) {
         setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
       }
     } else {
-      try {
-        const res = await fetch('/api/rentals', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          const newRecord = await res.json();
-          setData([newRecord, ...data]);
-        } else {
-          // Fallback if API fails
-          setData([{ id: Date.now(), ...payload } as RentalRecord, ...data]);
+      const payloads = newItems.map(item => ({
+        memberName: newMemberName,
+        phone: newPhone,
+        outfit: item.outfit,
+        rentDate: item.rentDate,
+        returnDate: item.returnDate,
+        status: item.status,
+        price: item.price,
+        advance: item.advance
+      }));
+      
+      const newRecords = [];
+      let currentId = Date.now();
+      for (const payload of payloads) {
+        try {
+          const res = await fetch('/api/rentals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            newRecords.push(await res.json());
+          } else {
+            newRecords.push({ id: currentId++, ...payload } as RentalRecord);
+          }
+        } catch (e) {
+          newRecords.push({ id: currentId++, ...payload } as RentalRecord);
         }
-      } catch (e) {
-        setData([{ id: Date.now(), ...payload } as RentalRecord, ...data]);
       }
+      setData([...newRecords, ...data]);
     }
     
     setShowAddPopup(false);
     setEditingId(null);
     setNewMemberName("");
     setNewPhone("");
-    setNewOutfit("");
-    setNewRentDate("");
-    setNewReturnDate("");
-    setNewStatus("Rented");
-    setNewPrice(0);
-    setNewAdvance(0);
+    setNewItems([{ id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }]);
   };
 
-  const handleEdit = (record: RentalRecord) => {
-    setEditingId(record.id);
-    setNewMemberName(record.memberName);
-    setNewPhone(record.phone);
-    setNewOutfit(record.outfit);
-    setNewRentDate(record.rentDate);
-    setNewReturnDate(record.returnDate);
-    setNewStatus(record.status);
-    setNewPrice(record.price);
-    setNewAdvance(record.advance);
+  const handleEditClick = (record: RentalRecord) => {
+    setConfirmAction({ type: 'edit', recordId: record.id, record });
     setActiveMenuId(null);
-    setShowAddPopup(true);
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      await fetch(`/api/rentals?id=${id}`, { method: 'DELETE' });
-    } catch (e) {
-      console.error(e);
+  const handleDeleteClick = (record: RentalRecord) => {
+    setConfirmAction({ type: 'delete', recordId: record.id });
+    setActiveMenuId(null);
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
+    
+    if (confirmAction.type === 'edit') {
+      const record = confirmAction.record!;
+      setEditingId(record.id);
+      setNewMemberName(record.memberName);
+      setNewPhone(record.phone);
+      setNewItems([{
+        id: '1',
+        outfit: record.outfit,
+        rentDate: record.rentDate,
+        returnDate: record.returnDate,
+        price: record.price,
+        advance: record.advance,
+        status: record.status
+      }]);
+      setShowAddPopup(true);
+    } else if (confirmAction.type === 'delete') {
+      const id = confirmAction.recordId;
+      try {
+        await fetch(`/api/rentals?id=${id}`, { method: 'DELETE' });
+      } catch (e) {
+        console.error(e);
+      }
+      setData(data.filter(r => r.id !== id));
     }
-    setData(data.filter(r => r.id !== id));
-    setActiveMenuId(null);
+    setConfirmAction(null);
   };
 
   const handleAddOutfitSubmit = async () => {
@@ -307,6 +339,7 @@ export default function CollectionData() {
           <table className="cd-outfit-table" style={{ width: "100%", borderCollapse: "collapse", minWidth: "500px" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #e0d5c1", textAlign: "left" }}>
+                <th style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px", width: "50px" }}>S.No.</th>
                 <th style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Outfit Name</th>
                 <th style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Purchase Value</th>
                 <th style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px", textAlign: "center" }}>Times Rented</th>
@@ -314,8 +347,9 @@ export default function CollectionData() {
               </tr>
             </thead>
             <tbody>
-              {outfitStats.map(stats => (
+              {outfitStats.map((stats, index) => (
                 <tr key={stats.name} style={{ borderBottom: "1px solid #eee" }}>
+                  <td data-label="S.No." style={{ padding: "12px 8px", color: "#666", fontWeight: "bold" }}>{index + 1}</td>
                   <td data-label="Outfit Name" style={{ padding: "12px 8px", fontFamily: "'Cinzel', serif", fontWeight: 600, color: "#1a1a1a" }}>{stats.name}</td>
                   <td data-label="Purchase Value" style={{ padding: "12px 8px", color: "#666" }}>{stats.purchaseValue > 0 ? `₹${stats.purchaseValue}` : '-'}</td>
                   <td data-label="Times Rented" style={{ padding: "12px 8px", color: "#1a1a1a", textAlign: "center", fontWeight: "bold" }}>{stats.count}</td>
@@ -340,12 +374,7 @@ export default function CollectionData() {
             setEditingId(null);
             setNewMemberName("");
             setNewPhone("");
-            setNewOutfit("");
-            setNewRentDate("");
-            setNewReturnDate("");
-            setNewStatus("Rented");
-            setNewPrice(0);
-            setNewAdvance(0);
+            setNewItems([{ id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }]);
             setShowAddPopup(true);
           }}
           className="cd-btn-add"
@@ -358,6 +387,7 @@ export default function CollectionData() {
         <table className="cd-table">
           <thead>
             <tr style={{ background: "#fcf9f2", borderBottom: "2px solid #a27022" }}>
+              <th style={{ width: "50px" }}>S.No.</th>
               <th>Member Name</th>
               <th>Phone No.</th>
               <th>Outfit</th>
@@ -371,8 +401,9 @@ export default function CollectionData() {
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
-              filteredData.map(record => (
+              filteredData.map((record, index) => (
                 <tr key={record.id}>
+                  <td data-label="S.No." style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
                   <td data-label="Member Name" style={{ fontWeight: 600 }}>{record.memberName}</td>
                   <td data-label="Phone No.">{record.phone}</td>
                   <td data-label="Outfit">{record.outfit}</td>
@@ -405,8 +436,8 @@ export default function CollectionData() {
                         boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
                         display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
                       }}>
-                        <button onClick={() => handleEdit(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
-                        <button onClick={() => handleDelete(record.id)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
+                        <button onClick={() => handleEditClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
+                        <button onClick={() => handleDeleteClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
                       </div>
                     )}
                   </td>
@@ -414,7 +445,7 @@ export default function CollectionData() {
               ))
             ) : (
               <tr>
-                <td colSpan={9} style={{ padding: "32px", textAlign: "center", color: "#999", fontStyle: "italic" }}>
+                <td colSpan={10} style={{ padding: "32px", textAlign: "center", color: "#999", fontStyle: "italic" }}>
                   No records found.
                 </td>
               </tr>
@@ -431,7 +462,7 @@ export default function CollectionData() {
         }}>
           <div style={{
             background: "#fff", padding: "24px", borderRadius: "8px",
-            width: "90%", maxWidth: "400px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            width: "90%", maxWidth: "500px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
             display: "flex", flexDirection: "column", gap: "16px",
             fontFamily: "'EB Garamond', serif", color: "#1a1a1a"
           }}>
@@ -449,45 +480,71 @@ export default function CollectionData() {
               <input value={newPhone} onChange={e => setNewPhone(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Outfit</label>
-              <select value={newOutfit} onChange={e => setNewOutfit(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}>
-                <option value="">-- Select Outfit --</option>
-                {outfits.map(o => (
-                  <option key={o.id} value={o.name}>{o.name}</option>
-                ))}
-              </select>
-            </div>
+            <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {newItems.map((item, index) => (
+                <div key={item.id} style={{ border: "1px solid #e0d5c1", padding: "16px", borderRadius: "8px", background: "#fcf9f2", position: "relative", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#a27022", fontSize: "16px" }}>Outfit Item {index + 1}</h4>
+                    {newItems.length > 1 && !editingId && (
+                      <button onClick={() => setNewItems(newItems.filter(i => i.id !== item.id))} style={{ background: "transparent", border: "none", color: "#cc5555", cursor: "pointer", fontSize: "20px", padding: "0 4px" }}>&times;</button>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Outfit Selection</label>
+                    <select 
+                      value={item.outfit} 
+                      onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, outfit: e.target.value } : i))} 
+                      style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
+                    >
+                      <option value="">-- Select Outfit --</option>
+                      {outfits.filter(o => o.name === item.outfit || !newItems.some(i => i.id !== item.id && i.outfit === o.name)).map(o => (
+                        <option key={o.id} value={o.name}>{o.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Rent Date</label>
-                <input type="date" value={newRentDate} onChange={e => setNewRentDate(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Return Date</label>
-                <input type="date" value={newReturnDate} onChange={e => setNewReturnDate(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-              </div>
-            </div>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                      <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Rent Date</label>
+                      <input type="date" value={item.rentDate} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, rentDate: e.target.value } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                      <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Return Date</label>
+                      <input type="date" value={item.returnDate} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, returnDate: e.target.value } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                    </div>
+                  </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Price (₹)</label>
-                <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Advance (₹)</label>
-                <input type="number" value={newAdvance} onChange={e => setNewAdvance(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-              </div>
-            </div>
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                      <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Price (₹)</label>
+                      <input type="number" value={item.price} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, price: Number(e.target.value) } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                      <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Advance (₹)</label>
+                      <input type="number" value={item.advance} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, advance: Number(e.target.value) } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                    </div>
+                  </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Status</label>
-              <select value={newStatus} onChange={e => setNewStatus(e.target.value as 'Rented'|'Returned'|'Overdue')} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}>
-                <option value="Rented">Rented</option>
-                <option value="Returned">Returned</option>
-                <option value="Overdue">Overdue</option>
-              </select>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Status</label>
+                    <select value={item.status} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, status: e.target.value as 'Rented'|'Returned'|'Overdue' } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}>
+                      <option value="Rented">Rented</option>
+                      <option value="Returned">Returned</option>
+                      <option value="Overdue">Overdue</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+              
+              {!editingId && (
+                <button 
+                  onClick={() => setNewItems([...newItems, { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }])}
+                  style={{ padding: "10px", background: "#fff", border: "1px dashed #c4a060", borderRadius: "8px", color: "#a27022", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600 }}
+                >
+                  + Add Another Outfit for this Person
+                </button>
+              )}
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
@@ -527,6 +584,65 @@ export default function CollectionData() {
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
               <button onClick={() => setShowAddOutfitPopup(false)} style={{ padding: "8px 16px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "2px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Cancel</button>
               <button onClick={handleAddOutfitSubmit} style={{ padding: "8px 16px", background: "#a27022", color: "#fff", border: "none", borderRadius: "2px", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Add Outfit</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmAction && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.6)", display: "flex",
+          justifyContent: "center", alignItems: "center", zIndex: 1100,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#fff", padding: "32px", borderRadius: "12px",
+            width: "90%", maxWidth: "400px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            display: "flex", flexDirection: "column", alignItems: "center",
+            fontFamily: "'EB Garamond', serif", color: "#1a1a1a", textAlign: "center"
+          }}>
+            <div style={{
+              width: "60px", height: "60px", borderRadius: "50%",
+              background: confirmAction.type === 'delete' ? "#feecec" : "#fcf9f2",
+              color: confirmAction.type === 'delete' ? "#cc5555" : "#a27022",
+              display: "flex", justifyContent: "center", alignItems: "center",
+              fontSize: "28px", marginBottom: "16px"
+            }}>
+              {confirmAction.type === 'delete' ? "!" : "?"}
+            </div>
+            
+            <h3 style={{ margin: "0 0 12px 0", color: "#1a1a1a", fontFamily: "'Cinzel', serif", fontSize: "22px", fontWeight: 600 }}>
+              {confirmAction.type === 'delete' ? "Confirm Deletion" : "Confirm Edit"}
+            </h3>
+            
+            <p style={{ margin: "0 0 24px 0", color: "#666", fontSize: "16px", lineHeight: "1.5" }}>
+              {confirmAction.type === 'delete' 
+                ? "Are you sure you want to delete this record? This action cannot be undone." 
+                : "Are you sure you want to proceed with editing this record?"}
+            </p>
+            
+            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+              <button 
+                onClick={() => setConfirmAction(null)} 
+                style={{ 
+                  flex: 1, padding: "12px", background: "#f5f5f5", border: "none", 
+                  borderRadius: "6px", cursor: "pointer", color: "#555", 
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" 
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeConfirmAction} 
+                style={{ 
+                  flex: 1, padding: "12px", 
+                  background: confirmAction.type === 'delete' ? "#cc5555" : "#a27022", 
+                  color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", 
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" 
+                }}
+              >
+                {confirmAction.type === 'delete' ? "Delete" : "Proceed"}
+              </button>
             </div>
           </div>
         </div>
