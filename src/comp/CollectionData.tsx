@@ -117,6 +117,7 @@ export default function CollectionData() {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: 'edit' | 'delete', recordId: number, record?: RentalRecord } | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<RentalRecord | null>(null);
 
   const handleAddRentalSubmit = async () => {
     if (!newMemberName || newItems.some(i => !i.outfit)) return;
@@ -287,7 +288,7 @@ export default function CollectionData() {
         .cd-subtitle { color: #666; font-style: italic; margin-top: 8px; }
         
         .cd-controls { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .cd-search { padding: 10px 16px; width: 100%; max-width: 350px; border-radius: 4px; border: 1px solid #c4a060; font-family: 'EB Garamond', serif; font-size: 16px; }
+        .cd-search { padding: 10px 16px; width: 100%; max-width: 350px; border-radius: 4px; border: 1px solid #c4a060; font-family: 'EB Garamond', serif; font-size: 16px; background: #fff; color: #1a1a1a; }
         .cd-btn-add { padding: 10px 20px; background: #a27022; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Cinzel', serif; font-weight: 600; white-space: nowrap; }
         
         .cd-table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
@@ -303,7 +304,11 @@ export default function CollectionData() {
           .cd-header { padding: 0 8px; }
           .cd-search { max-width: 100%; }
           .cd-btn-add { width: 100%; text-align: center; }
-          .cd-table-wrap, .cd-outfit-wrap { border-radius: 0; border-left: none; border-right: none; }
+          /* Revert to list-style table for mobile */
+          .cd-table-wrap, .cd-outfit-wrap { border-radius: 8px; border: 1px solid #eee; overflow-x: auto; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+          .cd-table { min-width: 600px; font-size: 14px; }
+          .cd-table th, .cd-table td { padding: 10px 8px; }
+          .cd-form-row { flex-direction: column; gap: 12px; }
         }
       `}</style>
       <div className="cd-header">
@@ -382,43 +387,33 @@ export default function CollectionData() {
             <tr style={{ background: "#fcf9f2", borderBottom: "2px solid #a27022" }}>
               <th style={{ width: "50px" }}>S.No.</th>
               <th>Member Name</th>
-              <th>Phone No.</th>
               <th>Outfit</th>
               <th>Rent Date</th>
-              <th>Return Date</th>
               <th>Price</th>
-              <th>Advance</th>
-              <th>Status</th>
               <th style={{ width: "40px" }}></th>
             </tr>
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
-              filteredData.map((record, index) => (
-                <tr key={record.id}>
-                  <td data-label="S.No." style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
-                  <td data-label="Member Name" style={{ fontWeight: 600 }}>{record.memberName}</td>
-                  <td data-label="Phone No.">{record.phone}</td>
-                  <td data-label="Outfit">{record.outfit}</td>
-                  <td data-label="Rent Date">{record.rentDate}</td>
-                  <td data-label="Return Date">{record.returnDate}</td>
-                  <td data-label="Price" style={{ fontWeight: 600, color: "#1a1a1a" }}>₹{record.price}</td>
-                  <td data-label="Advance">₹{record.advance}</td>
-                  <td data-label="Status">
-                    <span style={{
-                      padding: "4px 12px",
-                      borderRadius: "12px",
-                      fontSize: "13px",
-                      fontWeight: "bold",
-                      backgroundColor: record.status === 'Rented' ? '#eaf4ea' : record.status === 'Returned' ? '#f0f0f0' : '#feecec',
-                      color: record.status === 'Rented' ? '#3a7a3a' : record.status === 'Returned' ? '#666' : '#cc5555'
-                    }}>
-                      {record.status}
-                    </span>
-                  </td>
+              filteredData.map((record, index) => {
+                const rowBg = record.status === 'Overdue' ? '#feecec' : record.status === 'Rented' ? '#eaf4ea' : 'transparent';
+                const textColor = record.status === 'Returned' ? '#888' : '#1a1a1a';
+                return (
+                <tr 
+                  key={record.id} 
+                  style={{ background: rowBg, cursor: "pointer", borderBottom: "1px solid #eee", transition: "background 0.2s" }} 
+                  onClick={() => setViewingRecord(record)}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.9"} 
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                >
+                  <td style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
+                  <td style={{ fontWeight: 600, color: textColor }}>{record.memberName}</td>
+                  <td style={{ color: textColor }}>{record.outfit}</td>
+                  <td style={{ color: textColor }}>{record.rentDate}</td>
+                  <td style={{ fontWeight: 600, color: textColor }}>₹{record.price}</td>
                   <td className="actions-cell" style={{ position: "relative", textAlign: "center" }}>
                     <button 
-                      onClick={() => setActiveMenuId(activeMenuId === record.id ? null : record.id)}
+                      onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === record.id ? null : record.id); }}
                       style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "20px", padding: "4px 8px", color: "#a27022" }}
                     >
                       ⋮
@@ -429,13 +424,14 @@ export default function CollectionData() {
                         boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
                         display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
                       }}>
-                        <button onClick={() => handleEditClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
-                        <button onClick={() => handleDeleteClick(record)} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
+                        <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleEditClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
                       </div>
                     )}
                   </td>
                 </tr>
-              ))
+              );})
             ) : (
               <tr>
                 <td colSpan={10} style={{ padding: "32px", textAlign: "center", color: "#999", fontStyle: "italic" }}>
@@ -636,6 +632,59 @@ export default function CollectionData() {
               >
                 {confirmAction.type === 'delete' ? "Delete" : "Proceed"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingRecord && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
+          justifyContent: "center", alignItems: "center", zIndex: 1000,
+          padding: "20px"
+        }} onClick={() => setViewingRecord(null)}>
+          <div style={{
+            background: "#fff", padding: "32px", borderRadius: "12px",
+            width: "90%", maxWidth: "500px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            display: "flex", flexDirection: "column", gap: "24px",
+            fontFamily: "'EB Garamond', serif", color: "#1a1a1a",
+            maxHeight: "90vh", overflowY: "auto", position: "relative"
+          }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setViewingRecord(null)} style={{ position: "absolute", top: "16px", right: "16px", background: "transparent", border: "none", fontSize: "24px", cursor: "pointer", color: "#999", padding: "4px" }}>&times;</button>
+            
+            <div style={{ textAlign: "center", borderBottom: "1px solid #eee", paddingBottom: "16px" }}>
+              <h3 style={{ margin: "0 0 8px 0", color: "#a27022", fontFamily: "'Cinzel', serif", fontSize: "24px" }}>{viewingRecord.memberName}</h3>
+              {viewingRecord.phone && <p style={{ margin: 0, color: "#666", fontSize: "16px" }}>{viewingRecord.phone}</p>}
+              <span style={{
+                display: "inline-block", marginTop: "12px", padding: "4px 16px", borderRadius: "16px", fontSize: "14px", fontWeight: "bold",
+                backgroundColor: viewingRecord.status === 'Rented' ? '#eaf4ea' : viewingRecord.status === 'Returned' ? '#f0f0f0' : '#feecec',
+                color: viewingRecord.status === 'Rented' ? '#3a7a3a' : viewingRecord.status === 'Returned' ? '#666' : '#cc5555'
+              }}>
+                {viewingRecord.status}
+              </span>
+            </div>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div style={{ gridColumn: "1 / -1", background: "#fcf9f2", padding: "16px", borderRadius: "8px", border: "1px solid #e0d5c1" }}>
+                <strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Outfit Rented</strong>
+                <span style={{ fontSize: "18px", fontWeight: "bold" }}>{viewingRecord.outfit}</span>
+              </div>
+              <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Rent Date</strong><span style={{ fontSize: "16px" }}>{viewingRecord.rentDate}</span></div>
+              <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Return Date</strong><span style={{ fontSize: "16px" }}>{viewingRecord.returnDate}</span></div>
+              
+              <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px", display: "flex", justifyContent: "space-between" }}>
+                <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Total Price</strong><span style={{ fontSize: "18px", fontWeight: "bold" }}>₹{viewingRecord.price}</span></div>
+                <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Advance Paid</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.advance}</span></div>
+              </div>
+              <div style={{ gridColumn: "1 / -1", background: "#fcf9f2", padding: "16px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #e0d5c1" }}>
+                <strong style={{ color: "#a27022", fontSize: "16px", fontFamily: "'Cinzel', serif" }}>Balance Due:</strong>
+                <span style={{ fontSize: "22px", fontWeight: "bold", color: "#1a1a1a" }}>₹{viewingRecord.price - viewingRecord.advance}</span>
+              </div>
+            </div>
+            
+            <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+              <button onClick={() => { handleEditClick(viewingRecord); setViewingRecord(null); }} style={{ flex: 1, padding: "12px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "6px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Edit Item</button>
             </div>
           </div>
         </div>

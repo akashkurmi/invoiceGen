@@ -189,7 +189,7 @@ export default function MakeupData() {
         .cd-subtitle { color: #666; font-style: italic; margin-top: 8px; }
         
         .cd-controls { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .cd-search { padding: 10px 16px; width: 100%; max-width: 350px; border-radius: 4px; border: 1px solid #c4a060; font-family: 'EB Garamond', serif; font-size: 16px; }
+        .cd-search { padding: 10px 16px; width: 100%; max-width: 350px; border-radius: 4px; border: 1px solid #c4a060; font-family: 'EB Garamond', serif; font-size: 16px; background: #fff; color: #1a1a1a; }
         .cd-btn-add { padding: 10px 20px; background: #a27022; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Cinzel', serif; font-weight: 600; white-space: nowrap; }
         
         .cd-table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; }
@@ -197,6 +197,7 @@ export default function MakeupData() {
         .cd-table th { padding: 16px; text-align: left; font-family: 'Cinzel', serif; color: #1a1a1a; }
         .cd-table td { padding: 16px; color: #555; }
         .cd-table tr { border-bottom: 1px solid #eee; }
+        .cd-form-row { display: flex; gap: 12px; }
         
         @media (max-width: 768px) {
           .cd-container { padding: 12px 4px; }
@@ -204,7 +205,12 @@ export default function MakeupData() {
           .cd-header { padding: 0 8px; }
           .cd-search { max-width: 100%; }
           .cd-btn-add { width: 100%; text-align: center; }
-          .cd-table-wrap { border-radius: 0; border-left: none; border-right: none; }
+          /* Revert to list-style table for mobile */
+          .cd-table-wrap { border-radius: 8px; border: 1px solid #eee; overflow-x: auto; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+          .cd-table { min-width: 600px; font-size: 14px; }
+          .cd-table th, .cd-table td { padding: 10px 8px; }
+          
+          .cd-form-row { flex-direction: column; gap: 12px; }
         }
       `}</style>
       
@@ -307,7 +313,7 @@ export default function MakeupData() {
         }}>
           <div style={{
             background: "#fff", padding: "24px", borderRadius: "8px",
-            width: "90%", maxWidth: "450px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            width: "90%", maxWidth: "450px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
             display: "flex", flexDirection: "column", gap: "16px",
             fontFamily: "'EB Garamond', serif", color: "#1a1a1a"
           }}>
@@ -320,7 +326,7 @@ export default function MakeupData() {
               <input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="e.g. Seeta patel" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
             </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
+            <div className="cd-form-row">
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Phone (Optional)</label>
                 <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+91 00000 00000" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
@@ -372,7 +378,7 @@ export default function MakeupData() {
               </select>
             </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
+            <div className="cd-form-row">
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>No. of Services Count</label>
                 <input type="number" value={newNoOfServices} onChange={e => setNewNoOfServices(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
@@ -383,7 +389,7 @@ export default function MakeupData() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "12px" }}>
+            <div className="cd-form-row">
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Total Price (₹)</label>
                 <input type="number" value={newTotalPrice} onChange={e => setNewTotalPrice(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
