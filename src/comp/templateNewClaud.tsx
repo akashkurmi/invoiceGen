@@ -35,7 +35,7 @@ const serviceOptions = [
 ];
 
 export default function InvoiceGenerator() {
-  const [client, setClient] = useState<string>("M/s/Mr.");
+  const [client, setClient] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [dateRange, setDateRange] = useState<string>("March 10 - 11, 2026");
   const [venue, setVenue] = useState<string>("KK Palce, Khurai, MP");
@@ -157,7 +157,7 @@ export default function InvoiceGenerator() {
     doc.setTextColor(...black);
     doc.text("Client:", marginL, y);
     doc.setFont("helvetica", "normal");
-    doc.text(`   ${client}`, marginL + doc.getTextWidth("Client:"), y);
+    doc.text(`   M/s/Mr. ${client}`, marginL + doc.getTextWidth("Client:"), y);
 
     const yPhone = y + 6;
     doc.setFont("helvetica", "bold");
@@ -324,11 +324,29 @@ export default function InvoiceGenerator() {
     doc.setTextColor(...black);
     doc.text("1", pageW / 2, pageH - 8, { align: "center" });
 
-    const slug = client
+    const slug = (client || "invoice")
       .replace(/[^a-zA-Z0-9]/g, "_")
       .toLowerCase()
       .slice(0, 40);
     doc.save(`anjali_makeover_invoice_${slug}.pdf`);
+
+    // Automatically save this invoice to the Makeup Bookings database
+    fetch('/api/makeup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: client || "Unknown Client",
+        phone: phone || "",
+        email: "",
+        bookingDate: dateRange,
+        advance: Number(advance) || 0,
+        totalPrice: totalAmount,
+        venue: venue,
+        services: services.map(s => s.name).join(', '),
+        noOfServices: totalQty,
+        travelAmount: 0
+      })
+    }).catch(console.error);
   };
 
   return (
@@ -448,14 +466,17 @@ export default function InvoiceGenerator() {
             <div className="inv-meta-row">
               <span className="inv-meta-label">Client</span>
               {editing ? (
-                <input
-                  className="editable-meta"
-                  value={client}
-                  onChange={(e) => setClient(e.target.value)}
-                  placeholder="Client name"
-                />
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ marginRight: '6px', color: '#666', fontFamily: "'Helvetica Neue', sans-serif" }}>M/s/Mr.</span>
+                  <input
+                    className="editable-meta"
+                    value={client}
+                    onChange={(e) => setClient(e.target.value)}
+                    placeholder="Client name"
+                  />
+                </div>
               ) : (
-                <span className="inv-meta-value">{client}</span>
+                <span className="inv-meta-value">M/s/Mr. {client}</span>
               )}
             </div>
 

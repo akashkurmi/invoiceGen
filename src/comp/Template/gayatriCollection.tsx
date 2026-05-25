@@ -678,11 +678,12 @@ export default function GayatriCollection() {
           letter-spacing: 1px;
         }
 
-        @media (max-width: 480px) {
-          .gc-meta { grid-template-columns: 1fr; }
-          .gc-summary-table { width: 100%; }
-          .gc-footer { flex-direction: column; gap: 8px; }
-          input[type="number"], input[type="tel"], input[type="date"] { font-size: 16px; }
+        @media (max-width: 600px) {
+          .gc-meta { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .gc-meta-row.full-width { grid-column: span 1 !important; }
+          .gc-summary-table { width: 100% !important; }
+          .gc-footer { flex-direction: column !important; gap: 8px !important; }
+          input[type="number"], input[type="tel"], input[type="date"] { font-size: 16px !important; }
         }
 
         @media print {
