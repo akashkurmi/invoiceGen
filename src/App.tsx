@@ -6,7 +6,6 @@ import CollectionData from "./comp/CollectionData.js";
 import MakeupData from "./comp/MakeupData.js";
 
 function App() {
-  // 1. Initialize state to keep track of the selected component
   const [selectedTemplate, setSelectedTemplate] = useState("Gayatri");
 
   return (
