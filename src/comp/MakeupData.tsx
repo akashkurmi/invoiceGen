@@ -168,13 +168,42 @@ export default function MakeupData() {
     setConfirmAction(null);
   };
 
+  const handlePaymentSettled = async (record: MakeupRecord) => {
+    const fullAmount = record.totalPrice + (record.travelAmount || 0);
+    const payload = {
+      ...record,
+      advance: fullAmount
+    };
+
+    try {
+      const res = await fetch('/api/makeup', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const updatedRecord = await res.json();
+        setData(data.map(r => r.id === record.id ? updatedRecord : r));
+        setViewingRecord(updatedRecord);
+      } else {
+        setData(data.map(r => r.id === record.id ? payload : r));
+        setViewingRecord(payload);
+      }
+    } catch (e) {
+      setData(data.map(r => r.id === record.id ? payload : r));
+      setViewingRecord(payload);
+    }
+  };
+
   const filteredData = data.filter(record => 
     record.clientName.toLowerCase().includes(search.toLowerCase()) ||
     (record.venue && record.venue.toLowerCase().includes(search.toLowerCase()))
-  );
+  ).sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
 
   const totalBookings = data.length;
-  const totalMoney = data.reduce((sum, r) => sum + r.totalPrice, 0);
+  const totalAmount = data.reduce((sum, r) => sum + r.totalPrice + (r.travelAmount || 0), 0);
+  const totalPending = data.reduce((sum, r) => sum + Math.max(0, (r.totalPrice + (r.travelAmount || 0)) - r.advance), 0);
+  const totalMoney = totalAmount - totalPending;
 
   if (loading) {
     return <div style={{ padding: "40px", textAlign: "center", fontFamily: "'Cinzel', serif", color: "#a27022" }}>Loading Makeup Data...</div>;
@@ -227,7 +256,15 @@ export default function MakeupData() {
             <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>{totalBookings}</p>
           </div>
           <div>
-            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Money</h4>
+            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Amount</h4>
+            <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>₹{totalAmount}</p>
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Pending</h4>
+            <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#cc5555" }}>₹{totalPending}</p>
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontFamily: "'Cinzel', serif", color: "#666", fontSize: "14px" }}>Total Received Money</h4>
             <p style={{ margin: "4px 0 0", fontSize: "32px", fontWeight: "bold", color: "#a27022" }}>₹{totalMoney}</p>
           </div>
         </div>
@@ -261,42 +298,56 @@ export default function MakeupData() {
               <th>Booking Date</th>
               <th style={{ textAlign: "center" }}>Count</th>
               <th>Total Price</th>
+              <th>Pending Amount</th>
               <th style={{ width: "40px" }}></th>
             </tr>
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
-              filteredData.map((record, index) => (
-                <tr key={record.id} onClick={() => setViewingRecord(record)} style={{ cursor: "pointer", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fafafa"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td data-label="S.No." style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
-                  <td data-label="Client Name" style={{ fontWeight: 600 }}>{record.clientName}</td>
-                  <td data-label="Booking Date">{record.bookingDate}</td>
-                  <td data-label="Count" style={{ textAlign: "center" }}>{record.noOfServices}</td>
-                  <td data-label="Total Price" style={{ fontWeight: 600, color: "#1a1a1a" }}>₹{record.totalPrice}</td>
-                  <td className="actions-cell" style={{ position: "relative", textAlign: "center" }}>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === record.id ? null : record.id); }}
-                      style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "20px", padding: "4px 8px", color: "#a27022" }}
-                    >
-                      ⋮
-                    </button>
-                    {activeMenuId === record.id && (
-                      <div style={{
-                        position: "absolute", right: "24px", top: "40px", background: "#fff",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
-                        display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
-                      }}>
-                        <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'edit', recordId: record.id, record }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'delete', recordId: record.id }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+              filteredData.map((record, index) => {
+                const pendingAmount = (record.totalPrice + (record.travelAmount || 0)) - record.advance;
+                const isPending = pendingAmount > 0;
+                const rowBg = isPending ? "#feecec" : "transparent";
+                const hoverBg = isPending ? "#fcdcdc" : "#fafafa";
+                return (
+                  <tr 
+                    key={record.id} 
+                    onClick={() => setViewingRecord(record)} 
+                    style={{ cursor: "pointer", transition: "background 0.2s", background: rowBg }} 
+                    onMouseEnter={e => e.currentTarget.style.background = hoverBg} 
+                    onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                  >
+                    <td data-label="S.No." style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
+                    <td data-label="Client Name" style={{ fontWeight: 600 }}>{record.clientName}</td>
+                    <td data-label="Booking Date">{record.bookingDate}</td>
+                    <td data-label="Count" style={{ textAlign: "center" }}>{record.noOfServices}</td>
+                    <td data-label="Total Price" style={{ fontWeight: 600, color: "#1a1a1a" }}>₹{record.totalPrice}</td>
+                    <td data-label="Pending Amount" style={{ fontWeight: 600, color: isPending ? "#cc5555" : "#666" }}>₹{pendingAmount}</td>
+                    <td className="actions-cell" style={{ position: "relative", textAlign: "center" }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === record.id ? null : record.id); }}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "20px", padding: "4px 8px", color: "#a27022" }}
+                      >
+                        ⋮
+                      </button>
+                      {activeMenuId === record.id && (
+                        <div style={{
+                          position: "absolute", right: "24px", top: "40px", background: "#fff",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
+                          display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
+                        }}>
+                          <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'edit', recordId: record.id, record }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'delete', recordId: record.id }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "#999", fontStyle: "italic" }}>
+                <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#999", fontStyle: "italic" }}>
                   No bookings found.
                 </td>
               </tr>
@@ -395,7 +446,7 @@ export default function MakeupData() {
                 <input type="number" value={newTotalPrice} onChange={e => setNewTotalPrice(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Advance (₹)</label>
+                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Received Money (₹)</label>
                 <input type="number" value={newAdvance} onChange={e => setNewAdvance(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
               </div>
             </div>
@@ -511,17 +562,20 @@ export default function MakeupData() {
               </div>
               <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px", display: "flex", justifyContent: "space-between" }}>
                 <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Total Price</strong><span style={{ fontSize: "18px", fontWeight: "bold" }}>₹{viewingRecord.totalPrice}</span></div>
-                <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Advance Paid</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.advance}</span></div>
+                <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Received Money</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.advance}</span></div>
                 <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Travel Fee</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.travelAmount}</span></div>
               </div>
               <div style={{ gridColumn: "1 / -1", background: "#fcf9f2", padding: "16px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #e0d5c1" }}>
                 <strong style={{ color: "#a27022", fontSize: "16px", fontFamily: "'Cinzel', serif" }}>Balance Due:</strong>
-                <span style={{ fontSize: "22px", fontWeight: "bold", color: "#1a1a1a" }}>₹{(viewingRecord.totalPrice + viewingRecord.travelAmount) - viewingRecord.advance}</span>
+                <span style={{ fontSize: "22px", fontWeight: "bold", color: "#1a1a1a" }}>₹{(viewingRecord.totalPrice + (viewingRecord.travelAmount || 0)) - viewingRecord.advance}</span>
               </div>
             </div>
             
             <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
               <button onClick={() => { setConfirmAction({ type: 'edit', recordId: viewingRecord.id, record: viewingRecord }); setViewingRecord(null); }} style={{ flex: 1, padding: "12px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "6px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Edit Booking</button>
+              {((viewingRecord.totalPrice + (viewingRecord.travelAmount || 0)) - viewingRecord.advance) > 0 && (
+                <button onClick={() => handlePaymentSettled(viewingRecord)} style={{ flex: 1, padding: "12px", background: "#3a7a3a", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Payment Settled</button>
+              )}
             </div>
           </div>
         </div>
