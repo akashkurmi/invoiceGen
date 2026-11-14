@@ -142,6 +142,21 @@ export default function MakeupData() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: 'edit' | 'delete', recordId: number, record?: MakeupRecord } | null>(null);
   const [viewingRecord, setViewingRecord] = useState<MakeupRecord | null>(null);
+  const [showAllServices, setShowAllServices] = useState<boolean>(false);
+
+  useEffect(() => {
+    setShowAllServices(false);
+  }, [viewingRecord?.id]);
+
+  useEffect(() => {
+    if (viewingRecord || showAddPopup || confirmAction) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [viewingRecord, showAddPopup, confirmAction]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -775,20 +790,25 @@ export default function MakeupData() {
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: "rgba(0,0,0,0.6)", display: "flex",
           justifyContent: "center", alignItems: "center", zIndex: 1200,
-          backdropFilter: "blur(4px)"
+          backdropFilter: "blur(4px)",
+          padding: "16px"
         }} onClick={() => setViewingRecord(null)}>
           <div style={{
-            background: "#fff", padding: "32px", borderRadius: "12px",
-            width: "90%", maxWidth: "500px", boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-            display: "flex", flexDirection: "column", gap: "20px",
-            fontFamily: "'EB Garamond', serif", color: "#1a1a1a"
+            background: "#fff", padding: "28px 24px", borderRadius: "12px",
+            width: "100%", maxWidth: "520px", maxHeight: "90vh",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            display: "flex", flexDirection: "column", gap: "18px",
+            fontFamily: "'EB Garamond', serif", color: "#1a1a1a",
+            position: "relative"
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #eee", paddingBottom: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #eee", paddingBottom: "14px" }}>
               <div>
-                <h3 style={{ margin: "0 0 4px 0", color: "#a27022", fontFamily: "'Cinzel', serif", fontSize: "24px", fontWeight: 600 }}>Booking Details</h3>
+                <h3 style={{ margin: "0 0 4px 0", color: "#a27022", fontFamily: "'Cinzel', serif", fontSize: "22px", fontWeight: 600 }}>Booking Details</h3>
                 <span style={{ fontSize: "14px", color: "#666" }}>ID: #{viewingRecord.id} • {viewingRecord.bookingDate}</span>
               </div>
-              <button onClick={() => setViewingRecord(null)} style={{ background: "none", border: "none", fontSize: "28px", cursor: "pointer", color: "#999", lineHeight: 1 }}>&times;</button>
+              <button onClick={() => setViewingRecord(null)} style={{ background: "none", border: "none", fontSize: "28px", cursor: "pointer", color: "#999", lineHeight: 1, padding: "0 4px" }}>&times;</button>
             </div>
             
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", fontSize: "16px" }}>
@@ -796,29 +816,88 @@ export default function MakeupData() {
               <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Venue</strong>{viewingRecord.venue || '-'}</div>
               <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Phone No.</strong>{viewingRecord.phone || '-'}</div>
               <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Email</strong>{viewingRecord.email || '-'}</div>
-              <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px" }}>
-                <strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Services Taken ({viewingRecord.noOfServices})</strong>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {parseServices(viewingRecord.services).length > 0 ? (
-                    parseServices(viewingRecord.services).map((s, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fcf9f2", border: "1px solid #e0d5c1", padding: "6px 12px", borderRadius: "4px", fontSize: "14px" }}>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{s.name}</span>
-                          {(s.date || s.qty) && (
-                            <span style={{ fontSize: "12px", color: "#666" }}>
-                              {s.date ? s.date : ""} {s.date ? " • " : ""}Qty: {s.qty || 1}
-                            </span>
-                          )}
-                        </div>
-                        <span style={{ color: "#a27022", fontWeight: "bold" }}>₹{Number(s.price).toLocaleString("en-IN")}</span>
+              
+              <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "14px" }}>
+                {(() => {
+                  const allServices = parseServices(viewingRecord.services);
+                  const displayedServices = showAllServices ? allServices : allServices.slice(0, 3);
+                  return (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Services Taken ({viewingRecord.noOfServices || allServices.length})
+                        </strong>
+                        {allServices.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowAllServices(!showAllServices)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#a27022",
+                              fontFamily: "'Cinzel', serif",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              padding: "2px 6px",
+                              textDecoration: "underline"
+                            }}
+                          >
+                            {showAllServices ? "Show less ▴" : `Show all (${allServices.length}) ▾`}
+                          </button>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <span style={{ color: "#999", fontStyle: "italic" }}>No services listed</span>
-                  )}
-                </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {displayedServices.length > 0 ? (
+                          displayedServices.map((s, i) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fcf9f2", border: "1px solid #e0d5c1", padding: "8px 12px", borderRadius: "4px", fontSize: "14px" }}>
+                              <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{s.name}</span>
+                                {(s.date || s.qty) && (
+                                  <span style={{ fontSize: "12px", color: "#666" }}>
+                                    {s.date ? s.date : ""} {s.date ? " • " : ""}Qty: {s.qty || 1}
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ color: "#a27022", fontWeight: "bold" }}>₹{Number(s.price).toLocaleString("en-IN")}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span style={{ color: "#999", fontStyle: "italic" }}>No services listed</span>
+                        )}
+                      </div>
+
+                      {allServices.length > 3 && (
+                        <div style={{ display: "flex", justifyContent: "center", marginTop: "8px" }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowAllServices(!showAllServices)}
+                            style={{
+                              background: "#fcf9f2",
+                              border: "1px solid #e0d5c1",
+                              borderRadius: "4px",
+                              color: "#a27022",
+                              fontFamily: "'Cinzel', serif",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              padding: "5px 14px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px"
+                            }}
+                          >
+                            {showAllServices ? "Show less ▴" : `Show all (${allServices.length}) ▾`}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
-              <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px", display: "flex", justifyContent: "space-between" }}>
+
+              <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "14px", display: "flex", justifyContent: "space-between" }}>
                 <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Total Price</strong><span style={{ fontSize: "18px", fontWeight: "bold" }}>₹{viewingRecord.totalPrice}</span></div>
                 <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Received Money</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.advance}</span></div>
                 <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Travel Fee</strong><span style={{ fontSize: "18px" }}>₹{viewingRecord.travelAmount}</span></div>
@@ -829,7 +908,7 @@ export default function MakeupData() {
               </div>
             </div>
             
-            <div style={{ display: "flex", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "12px", marginTop: "4px", flexWrap: "wrap" }}>
               <button onClick={() => { setConfirmAction({ type: 'edit', recordId: viewingRecord.id, record: viewingRecord }); setViewingRecord(null); }} style={{ flex: 1, padding: "12px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "6px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Edit Booking</button>
               <button onClick={() => generateMakeupPDF(viewingRecord)} style={{ flex: 1, padding: "12px", background: "#a27022", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>📄 Download Invoice</button>
               {((viewingRecord.totalPrice + (viewingRecord.travelAmount || 0)) - viewingRecord.advance) > 0 && (
