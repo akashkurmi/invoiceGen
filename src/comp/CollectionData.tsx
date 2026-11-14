@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './Template.css';
+import { generateRentalPDF } from '../utils/pdfGenerator.js';
 interface Outfit {
   id: number;
   name: string;
@@ -65,8 +66,8 @@ interface NewRentalItem {
   outfit: string;
   rentDate: string;
   returnDate: string;
-  price: number;
-  advance: number;
+  price: number | "";
+  advance: number | "";
   status: 'Rented' | 'Returned' | 'Overdue';
 }
 
@@ -78,6 +79,9 @@ export default function CollectionData() {
 
   useEffect(() => {
     fetchData();
+    const handleClickOutside = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
   const fetchData = async () => {
@@ -106,13 +110,13 @@ export default function CollectionData() {
 
   const [showAddOutfitPopup, setShowAddOutfitPopup] = useState(false);
   const [newOutfitName, setNewOutfitName] = useState("");
-  const [newOutfitValue, setNewOutfitValue] = useState<number>(0);
+  const [newOutfitValue, setNewOutfitValue] = useState<number | "">("");
 
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newItems, setNewItems] = useState<NewRentalItem[]>([
-    { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }
+    { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: "", advance: "", status: "Rented" }
   ]);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -131,8 +135,8 @@ export default function CollectionData() {
         rentDate: item.rentDate,
         returnDate: item.returnDate,
         status: item.status,
-        price: item.price,
-        advance: item.advance
+        price: Number(item.price) || 0,
+        advance: Number(item.advance) || 0
       };
       try {
         const res = await fetch('/api/rentals', {
@@ -146,7 +150,7 @@ export default function CollectionData() {
         } else {
           setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
         }
-      } catch (e) {
+      } catch {
         setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
       }
     } else {
@@ -157,8 +161,8 @@ export default function CollectionData() {
         rentDate: item.rentDate,
         returnDate: item.returnDate,
         status: item.status,
-        price: item.price,
-        advance: item.advance
+        price: Number(item.price) || 0,
+        advance: Number(item.advance) || 0
       }));
       
       const newRecords = [];
@@ -175,7 +179,7 @@ export default function CollectionData() {
           } else {
             newRecords.push({ id: currentId++, ...payload } as RentalRecord);
           }
-        } catch (e) {
+        } catch {
           newRecords.push({ id: currentId++, ...payload } as RentalRecord);
         }
       }
@@ -186,7 +190,7 @@ export default function CollectionData() {
     setEditingId(null);
     setNewMemberName("");
     setNewPhone("");
-    setNewItems([{ id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }]);
+    setNewItems([{ id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: "", advance: "", status: "Rented" }]);
   };
 
   const handleEditClick = (record: RentalRecord) => {
@@ -212,8 +216,8 @@ export default function CollectionData() {
         outfit: record.outfit,
         rentDate: record.rentDate,
         returnDate: record.returnDate,
-        price: record.price,
-        advance: record.advance,
+        price: record.price === 0 ? "" : record.price,
+        advance: record.advance === 0 ? "" : record.advance,
         status: record.status
       }]);
       setShowAddPopup(true);
@@ -231,25 +235,26 @@ export default function CollectionData() {
 
   const handleAddOutfitSubmit = async () => {
     if (!newOutfitName) return;
+    const outfitVal = Number(newOutfitValue) || 0;
     
     try {
       const res = await fetch('/api/outfits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newOutfitName, purchaseValue: newOutfitValue })
+        body: JSON.stringify({ name: newOutfitName, purchaseValue: outfitVal })
       });
       if (res.ok) {
         const newOutfit = await res.json();
         setOutfits([...outfits, newOutfit]);
       } else {
-        setOutfits([...outfits, { id: Date.now(), name: newOutfitName, purchaseValue: newOutfitValue }]);
+        setOutfits([...outfits, { id: Date.now(), name: newOutfitName, purchaseValue: outfitVal }]);
       }
-    } catch (e) {
-      setOutfits([...outfits, { id: Date.now(), name: newOutfitName, purchaseValue: newOutfitValue }]);
+    } catch {
+      setOutfits([...outfits, { id: Date.now(), name: newOutfitName, purchaseValue: outfitVal }]);
     }
     setShowAddOutfitPopup(false);
     setNewOutfitName("");
-    setNewOutfitValue(0);
+    setNewOutfitValue("");
   };
 
   const filteredData = data.filter(record => 
@@ -418,17 +423,18 @@ export default function CollectionData() {
                     >
                       ⋮
                     </button>
-                    {activeMenuId === record.id && (
-                      <div style={{
-                        position: "absolute", right: "24px", top: "40px", background: "#fff",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
-                        display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
-                      }}>
-                        <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
-                        <button onClick={(e) => { e.stopPropagation(); handleEditClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
-                      </div>
-                    )}
+                      {activeMenuId === record.id && (
+                        <div style={{
+                          position: "absolute", right: "24px", top: "40px", background: "#fff",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
+                          display: "flex", flexDirection: "column", minWidth: "155px", border: "1px solid #eee"
+                        }}>
+                          <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
+                          <button onClick={(e) => { e.stopPropagation(); generateRentalPDF(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#a27022", fontFamily: "'EB Garamond', serif", fontSize: "15px", fontWeight: 600 }}>📄 Download Invoice</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleEditClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
+                        </div>
+                      )}
                   </td>
                 </tr>
               );})
@@ -507,11 +513,23 @@ export default function CollectionData() {
                   <div className="cd-form-row">
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                       <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Price (₹)</label>
-                      <input type="number" value={item.price} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, price: Number(e.target.value) } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                      <input 
+                        type="number" 
+                        placeholder="0"
+                        value={item.price === 0 ? "" : item.price} 
+                        onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, price: e.target.value === "" ? "" : Number(e.target.value) } : i))} 
+                        style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} 
+                      />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                       <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Advance (₹)</label>
-                      <input type="number" value={item.advance} onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, advance: Number(e.target.value) } : i))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                      <input 
+                        type="number" 
+                        placeholder="0"
+                        value={item.advance === 0 ? "" : item.advance} 
+                        onChange={e => setNewItems(newItems.map(i => i.id === item.id ? { ...i, advance: e.target.value === "" ? "" : Number(e.target.value) } : i))} 
+                        style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} 
+                      />
                     </div>
                   </div>
 
@@ -528,7 +546,7 @@ export default function CollectionData() {
               
               {!editingId && (
                 <button 
-                  onClick={() => setNewItems([...newItems, { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: 0, advance: 0, status: "Rented" }])}
+                  onClick={() => setNewItems([...newItems, { id: Date.now().toString(), outfit: "", rentDate: "", returnDate: "", price: "", advance: "", status: "Rented" }])}
                   style={{ padding: "10px", background: "#fff", border: "1px dashed #c4a060", borderRadius: "8px", color: "#a27022", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600 }}
                 >
                   + Add Another Outfit for this Person
@@ -567,7 +585,13 @@ export default function CollectionData() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Purchase Value (₹)</label>
-              <input type="number" value={newOutfitValue} onChange={e => setNewOutfitValue(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+              <input 
+                type="number" 
+                placeholder="0"
+                value={newOutfitValue === 0 ? "" : newOutfitValue} 
+                onChange={e => setNewOutfitValue(e.target.value === "" ? "" : Number(e.target.value))} 
+                style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} 
+              />
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
@@ -685,6 +709,7 @@ export default function CollectionData() {
             
             <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
               <button onClick={() => { handleEditClick(viewingRecord); setViewingRecord(null); }} style={{ flex: 1, padding: "12px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "6px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Edit Item</button>
+              <button onClick={() => generateRentalPDF(viewingRecord)} style={{ flex: 1, padding: "12px", background: "#a27022", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>📄 Download Invoice</button>
             </div>
           </div>
         </div>

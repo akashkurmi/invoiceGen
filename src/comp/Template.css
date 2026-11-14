@@ -266,6 +266,33 @@
       text-align: right;
     }
 
+    .inv-table th.col-service,
+    .inv-table td.col-service {
+      text-align: left;
+      width: 46%;
+    }
+
+    .inv-table th.col-date,
+    .inv-table td.col-date {
+      text-align: left;
+      width: 26%;
+      min-width: 130px;
+    }
+
+    .inv-table th.col-qty,
+    .inv-table td.col-qty {
+      text-align: center;
+      width: 12%;
+      min-width: 55px;
+    }
+
+    .inv-table th.col-price,
+    .inv-table td.col-price {
+      text-align: right;
+      width: 16%;
+      min-width: 75px;
+    }
+
     .inv-table td {
       padding: 7px 6px 7px 0;
       border-bottom: none;
@@ -299,6 +326,56 @@
     .editable-input:focus { border-bottom-color: #e0206a; background: #fff8f5; }
     .editable-input.right { text-align: right; }
 
+    .editable-input.qty-input {
+      -webkit-appearance: auto !important;
+      appearance: auto !important;
+      width: 50px;
+      text-align: center;
+      padding: 3px 2px;
+      border: 1px solid #d4a574;
+      border-radius: 4px;
+      background: #fff;
+      font-family: 'EB Garamond', serif;
+      font-size: clamp(12px, 2.8vw, 14.5px);
+      font-weight: 600;
+      color: #1a1a1a;
+      box-sizing: border-box;
+      margin: 0 auto;
+      display: inline-block;
+    }
+
+    .service-date-input {
+      -webkit-appearance: auto !important;
+      appearance: auto !important;
+      border: 1px solid #d4a574;
+      border-radius: 4px;
+      background: #fff;
+      font-family: 'EB Garamond', serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      padding: 4px 8px;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      max-width: 140px;
+      height: 32px;
+      box-sizing: border-box;
+    }
+
+    .service-date-input:focus {
+      border-color: #e0206a;
+    }
+
+    .service-date-input::-webkit-calendar-picker-indicator {
+      display: inline-block !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      padding: 1px;
+      margin-left: auto;
+      filter: invert(20%) sepia(85%) saturate(3000%) hue-rotate(320deg) brightness(85%) contrast(95%);
+    }
+
     .editable-meta {
       border: none;
       border-bottom: 1px dashed #d4a574;
@@ -313,6 +390,40 @@
       -webkit-appearance: none;
     }
     .editable-meta:focus { border-bottom-color: #e0206a; }
+
+    .date-picker-input {
+      -webkit-appearance: auto !important;
+      appearance: auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      display: block;
+      padding: 5px 12px;
+      border: 1px solid #d4a574;
+      border-radius: 4px;
+      background-color: #fff;
+      font-family: 'EB Garamond', serif;
+      font-size: clamp(13px, 3.2vw, 15px);
+      font-weight: 600;
+      color: #1a1a1a;
+      cursor: pointer;
+      outline: none;
+      min-height: 32px;
+    }
+
+    .date-picker-input:focus {
+      border-color: #e0206a;
+      box-shadow: 0 0 0 2px rgba(224, 32, 106, 0.15);
+    }
+
+    .date-picker-input::-webkit-calendar-picker-indicator {
+      display: inline-block !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      padding: 2px;
+      margin-left: auto;
+      filter: invert(20%) sepia(85%) saturate(3000%) hue-rotate(320deg) brightness(85%) contrast(95%);
+    }
 
     /* Summary */
     .inv-summary {
@@ -385,16 +496,153 @@
     }
 
     /* Mobile tweaks */
-    @media (max-width: 600px) {
-      .inv-meta { grid-template-columns: 1fr; gap: 12px; }
-      .inv-meta-row.full-width { grid-column: span 1; }
-      .summary-table { width: 100%; }
-      .inv-footer { flex-direction: column; gap: 8px; }
-      .editable-meta { min-width: 100px; width: 100%; }
-      input[type="number"], input[type="text"], input[type="date"], select { font-size: 16px; }
-      
-      .controls { flex-direction: column; align-items: stretch; width: 100%; }
-      .btn { width: 100%; text-align: center; }
+    @media (max-width: 768px) {
+      .app-wrapper {
+        padding: 8px 0 24px 0 !important;
+        background: #ffffff !important;
+      }
+
+      .app-title-bar {
+        padding: 0 12px;
+        margin-bottom: 12px;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        padding: 0 12px;
+        margin-bottom: 16px;
+        gap: 8px;
+      }
+
+      .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      .invoice-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 16px 12px 24px 12px !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        background: #ffffff !important;
+      }
+
+      .inv-header {
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+
+      .inv-meta {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .inv-meta-row.full-width {
+        grid-column: span 1;
+      }
+
+      .summary-table {
+        width: 100%;
+      }
+
+      .inv-footer {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .editable-meta {
+        min-width: 100px;
+        width: 100%;
+      }
+
+      input[type="number"], input[type="text"], select {
+        font-size: 16px;
+      }
+      .date-picker-input {
+        font-size: 16px !important;
+      }
+
+      /* Compact table columns on mobile */
+      .inv-table {
+        width: 100% !important;
+        min-width: 100% !important;
+      }
+
+      .inv-table th, .inv-table td {
+        padding: 6px 3px !important;
+        font-size: 12px !important;
+      }
+
+      .inv-table th.col-service, .inv-table td.col-service {
+        width: auto !important;
+        min-width: 95px !important;
+        padding-left: 0 !important;
+      }
+
+      .inv-table th.col-date, .inv-table td.col-date {
+        width: 80px !important;
+        min-width: 74px !important;
+        max-width: 84px !important;
+        text-align: center !important;
+        padding: 4px 2px !important;
+      }
+
+      .service-date-input {
+        font-size: 11px !important;
+        padding: 2px 2px !important;
+        width: 100% !important;
+        max-width: 80px !important;
+        height: 28px !important;
+        margin: 0 auto !important;
+        display: block !important;
+        background: #ffffff !important;
+        color: #1a1a1a !important;
+      }
+
+      .service-date-input::-webkit-calendar-picker-indicator {
+        width: 11px !important;
+        height: 11px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .inv-table th.col-qty, .inv-table td.col-qty {
+        width: 48px !important;
+        min-width: 44px !important;
+        max-width: 52px !important;
+        text-align: center !important;
+        padding: 4px 2px !important;
+      }
+
+      .editable-input.qty-input {
+        width: 44px !important;
+        font-size: 13px !important;
+        padding: 2px 2px !important;
+        height: 28px !important;
+        background: #ffffff !important;
+        color: #1a1a1a !important;
+      }
+
+      .inv-table th.col-price, .inv-table td.col-price {
+        width: 62px !important;
+        min-width: 52px !important;
+        max-width: 70px !important;
+        text-align: right !important;
+        padding: 4px 0 !important;
+      }
+
+      .editable-input.right {
+        width: 56px !important;
+        font-size: 12px !important;
+        padding: 2px 1px !important;
+      }
     }
 
     @media print {
@@ -404,7 +652,8 @@
       .app-wrapper { padding: 0; background: white !important; }
       .invoice-card { box-shadow: none; padding: 0; }
       .btn-remove { display: none !important; }
-      .editable-input, .editable-meta {
+      .editable-input, .editable-meta, .date-picker-input, .service-date-input, .qty-input {
+        border: none !important;
         border-bottom: none !important;
         background: transparent !important;
       }

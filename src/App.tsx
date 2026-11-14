@@ -9,9 +9,9 @@ function App() {
   const [selectedTemplate, setSelectedTemplate] = useState("Gayatri");
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="app-container">
       {/* 2. Create the Dropdown Selection */}
-      <div style={{ marginBottom: "20px" }}>
+      <div className="template-selector-bar">
         <label htmlFor="template-select">Select Invoice Template: </label>
         <select
           id="template-select"
@@ -25,7 +25,7 @@ function App() {
         </select>
       </div>
 
-      <hr />
+      <hr className="template-selector-divider" />
 
       {/* 3. Conditionally render the selected component */}
       <div className="display-area">

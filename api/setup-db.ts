@@ -24,10 +24,8 @@ export default async function handler(req: any, res: any) {
       );
     `;
 
-    await sql`DROP TABLE IF EXISTS makeup_bookings`;
-
     await sql`
-      CREATE TABLE makeup_bookings (
+      CREATE TABLE IF NOT EXISTS makeup_bookings (
         id SERIAL PRIMARY KEY,
         "clientName" VARCHAR(255) NOT NULL,
         phone VARCHAR(255),
@@ -36,12 +34,18 @@ export default async function handler(req: any, res: any) {
         advance INTEGER NOT NULL,
         "totalPrice" INTEGER NOT NULL,
         venue VARCHAR(255),
-        services VARCHAR(500),
+        services TEXT,
         "noOfServices" INTEGER NOT NULL DEFAULT 1,
         "travelAmount" INTEGER DEFAULT 0
       );
     `;
-    return res.status(200).json({ message: "Tables created successfully!" });
+
+    // Ensure services column is TEXT so it supports JSON data of any size without losing data
+    await sql`
+      ALTER TABLE makeup_bookings 
+      ALTER COLUMN services TYPE TEXT;
+    `;
+    return res.status(200).json({ message: "Tables created/updated successfully!" });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

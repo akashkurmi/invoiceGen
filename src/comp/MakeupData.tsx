@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import './Template.css';
+import { generateMakeupPDF } from '../utils/pdfGenerator.js';
 
-interface MakeupRecord {
+export interface ServiceItem {
+  name: string;
+  price: number | "";
+  qty?: string | number;
+  date?: string;
+}
+
+export interface MakeupRecord {
   id: number;
   clientName: string;
   bookingDate: string;
@@ -10,10 +18,66 @@ interface MakeupRecord {
   venue: string;
   phone?: string;
   email?: string;
-  services: string;
+  services: string | ServiceItem[];
   noOfServices: number;
   travelAmount: number;
 }
+
+const parseServices = (raw: unknown): ServiceItem[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((s) => {
+      if (typeof s === 'string') {
+        return { name: s, price: "", qty: 1, date: "" };
+      }
+      const rawQty = s.qty !== undefined && s.qty !== null ? s.qty : 1;
+      const numQty = typeof rawQty === 'number' ? rawQty : parseInt(String(rawQty));
+      return {
+        name: s.name || '',
+        price: s.price === 0 || s.price === "" ? "" : Number(s.price),
+        qty: isNaN(numQty) ? 1 : numQty,
+        date: s.date || '',
+      };
+    });
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((s) => {
+            if (typeof s === 'string') {
+              return { name: s, price: "", qty: 1, date: "" };
+            }
+            const rawQty = s.qty !== undefined && s.qty !== null ? s.qty : 1;
+            const numQty = typeof rawQty === 'number' ? rawQty : parseInt(String(rawQty));
+            return {
+              name: s.name || '',
+              price: s.price === 0 || s.price === "" ? "" : Number(s.price),
+              qty: isNaN(numQty) ? 1 : numQty,
+              date: s.date || '',
+            };
+          });
+        }
+      } catch {
+        // fall through to comma separated
+      }
+    }
+    // Older legacy string format: "Basic Makeup, HD Makeup"
+    return trimmed
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((name) => ({
+        name,
+        price: "", // empty so it shows placeholder 0
+        qty: 1,
+        date: "",
+      }));
+  }
+  return [];
+};
 
 const serviceOptions = [
   "Bridal Makeup", "Bride Phere Makeup", "Haldi Makeup", "Engagement Makeup",
@@ -30,6 +94,9 @@ export default function MakeupData() {
 
   useEffect(() => {
     fetchData();
+    const handleClickOutside = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
   const fetchData = async () => {
@@ -41,8 +108,8 @@ export default function MakeupData() {
       } else {
         // Mock data fallback if DB fails
         setData([
-          { id: 1, clientName: "Priya Sharma", bookingDate: "2026-06-15", advance: 2000, totalPrice: 15000, venue: "Grand Hyatt", services: "Bridal Makeup", noOfServices: 1, travelAmount: 500 },
-          { id: 2, clientName: "Neha Gupta", bookingDate: "2026-06-18", advance: 1500, totalPrice: 12000, venue: "Taj Palace", services: "Engagement Makeup, Sider Makeup", noOfServices: 2, travelAmount: 0 }
+          { id: 1, clientName: "Priya Sharma", bookingDate: "2026-06-15", advance: 2000, totalPrice: 15000, venue: "Grand Hyatt", services: JSON.stringify([{ name: "Bridal Makeup", date: "2026-06-15", price: 15000, qty: 1 }]), noOfServices: 1, travelAmount: 500 },
+          { id: 2, clientName: "Neha Gupta", bookingDate: "2026-06-18", advance: 1500, totalPrice: 12000, venue: "Taj Palace", services: JSON.stringify([{ name: "Engagement Makeup", date: "2026-06-18", price: 8000, qty: 1 }, { name: "Sider Makeup", date: "2026-06-18", price: 4000, qty: 1 }]), noOfServices: 2, travelAmount: 0 }
         ]);
       }
     } catch (error) {
@@ -56,14 +123,20 @@ export default function MakeupData() {
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newBookingDate, setNewBookingDate] = useState("");
-  const [newAdvance, setNewAdvance] = useState<number>(0);
-  const [newTotalPrice, setNewTotalPrice] = useState<number>(0);
+  const [newAdvance, setNewAdvance] = useState<number | "">("");
+  const [newTotalPrice, setNewTotalPrice] = useState<number | "">("");
   const [newVenue, setNewVenue] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newServices, setNewServices] = useState<string[]>([]);
-  const [newNoOfServices, setNewNoOfServices] = useState<number>(1);
-  const [newTravelAmount, setNewTravelAmount] = useState<number>(0);
+  const [newServices, setNewServices] = useState<ServiceItem[]>([]);
+  const [selectedServiceOption, setSelectedServiceOption] = useState<string>("");
+  const [newServicePrice, setNewServicePrice] = useState<number | "">("");
+  const [customServiceName, setCustomServiceName] = useState<string>("");
+  const [includeHairstyle, setIncludeHairstyle] = useState<boolean>(true);
+  const [includeLens, setIncludeLens] = useState<boolean>(true);
+  const [includeLashes, setIncludeLashes] = useState<boolean>(true);
+  const [newNoOfServices, setNewNoOfServices] = useState<number | "">("");
+  const [newTravelAmount, setNewTravelAmount] = useState<number | "">("");
   
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -74,14 +147,20 @@ export default function MakeupData() {
     setEditingId(null);
     setNewClientName("");
     setNewBookingDate("");
-    setNewAdvance(0);
-    setNewTotalPrice(0);
+    setNewAdvance("");
+    setNewTotalPrice("");
     setNewVenue("");
     setNewPhone("");
     setNewEmail("");
     setNewServices([]);
-    setNewNoOfServices(0);
-    setNewTravelAmount(0);
+    setSelectedServiceOption("");
+    setNewServicePrice("");
+    setCustomServiceName("");
+    setIncludeHairstyle(true);
+    setIncludeLens(true);
+    setIncludeLashes(true);
+    setNewNoOfServices("");
+    setNewTravelAmount("");
   };
 
   const handleSubmit = async () => {
@@ -92,12 +171,17 @@ export default function MakeupData() {
       phone: newPhone,
       email: newEmail,
       bookingDate: newBookingDate,
-      advance: newAdvance,
-      totalPrice: newTotalPrice,
+      advance: Number(newAdvance) || 0,
+      totalPrice: Number(newTotalPrice) || 0,
       venue: newVenue,
-      services: newServices.join(', '),
-      noOfServices: newNoOfServices,
-      travelAmount: newTravelAmount
+      services: JSON.stringify(newServices.map(s => ({
+        name: s.name,
+        date: s.date || newBookingDate,
+        qty: Number(s.qty) || 1,
+        price: Number(s.price) || 0
+      }))),
+      noOfServices: Number(newNoOfServices) || newServices.length || 1,
+      travelAmount: Number(newTravelAmount) || 0
     };
 
     if (editingId) {
@@ -113,7 +197,7 @@ export default function MakeupData() {
         } else {
           setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
         }
-      } catch (e) {
+      } catch {
         setData(data.map(record => record.id === editingId ? { ...record, ...payload } : record));
       }
     } else {
@@ -129,7 +213,7 @@ export default function MakeupData() {
         } else {
           setData([{ id: Date.now(), ...payload } as MakeupRecord, ...data]);
         }
-      } catch (e) {
+      } catch {
         setData([{ id: Date.now(), ...payload } as MakeupRecord, ...data]);
       }
     }
@@ -146,22 +230,22 @@ export default function MakeupData() {
       setEditingId(record.id);
       setNewClientName(record.clientName);
       setNewBookingDate(record.bookingDate);
-      setNewAdvance(record.advance);
-      setNewTotalPrice(record.totalPrice);
+      setNewAdvance(record.advance === 0 ? "" : record.advance);
+      setNewTotalPrice(record.totalPrice === 0 ? "" : record.totalPrice);
       setNewVenue(record.venue || "");
       setNewPhone(record.phone || "");
       setNewEmail(record.email || "");
-      const existingServices = record.services ? record.services.split(',').map(s => s.trim()).filter(Boolean) : [];
-      setNewServices(existingServices);
-      setNewNoOfServices(record.noOfServices || existingServices.length);
-      setNewTravelAmount(record.travelAmount || 0);
+      const parsedServices = parseServices(record.services);
+      setNewServices(parsedServices);
+      setNewNoOfServices(record.noOfServices === 0 ? "" : (record.noOfServices || parsedServices.length));
+      setNewTravelAmount(record.travelAmount === 0 ? "" : (record.travelAmount || ""));
       setShowAddPopup(true);
     } else if (confirmAction.type === 'delete') {
       const id = confirmAction.recordId;
       try {
         await fetch(`/api/makeup?id=${id}`, { method: 'DELETE' });
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error(err);
       }
       setData(data.filter(r => r.id !== id));
     }
@@ -172,6 +256,7 @@ export default function MakeupData() {
     const fullAmount = record.totalPrice + (record.travelAmount || 0);
     const payload = {
       ...record,
+      services: typeof record.services === 'object' ? JSON.stringify(record.services) : record.services,
       advance: fullAmount
     };
 
@@ -189,7 +274,7 @@ export default function MakeupData() {
         setData(data.map(r => r.id === record.id ? payload : r));
         setViewingRecord(payload);
       }
-    } catch (e) {
+    } catch {
       setData(data.map(r => r.id === record.id ? payload : r));
       setViewingRecord(payload);
     }
@@ -334,9 +419,10 @@ export default function MakeupData() {
                         <div style={{
                           position: "absolute", right: "24px", top: "40px", background: "#fff",
                           boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: "4px", zIndex: 10,
-                          display: "flex", flexDirection: "column", minWidth: "120px", border: "1px solid #eee"
+                          display: "flex", flexDirection: "column", minWidth: "155px", border: "1px solid #eee"
                         }}>
                           <button onClick={(e) => { e.stopPropagation(); setViewingRecord(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>👁 View Details</button>
+                          <button onClick={(e) => { e.stopPropagation(); generateMakeupPDF(record); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#a27022", fontFamily: "'EB Garamond', serif", fontSize: "15px", fontWeight: 600 }}>📄 Download Invoice</button>
                           <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'edit', recordId: record.id, record }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", borderBottom: "1px solid #eee", cursor: "pointer", color: "#1a1a1a", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>✎ Edit Item</button>
                           <button onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: 'delete', recordId: record.id }); setActiveMenuId(null); }} style={{ padding: "10px 16px", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "#cc5555", fontFamily: "'EB Garamond', serif", fontSize: "15px" }}>× Delete</button>
                         </div>
@@ -393,61 +479,219 @@ export default function MakeupData() {
               <input type="date" value={newBookingDate} onChange={e => setNewBookingDate(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Services Taken</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>
+                  Services Taken ({newServices.length})
+                </label>
+                {newServices.length > 0 && (
+                  <span style={{ fontSize: "13px", color: "#a27022", fontWeight: 600 }}>
+                    Services Total: ₹{newServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)}
+                  </span>
+                )}
+              </div>
               
-              {newServices.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "4px" }}>
+              {newServices.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "150px", overflowY: "auto", paddingRight: "4px" }}>
                   {newServices.map((s, idx) => (
-                    <span key={idx} style={{ background: "#fcf9f2", color: "#a27022", border: "1px solid #c4a060", padding: "4px 8px", borderRadius: "4px", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", fontFamily: "'EB Garamond', serif" }}>
-                      {s}
-                      <button onClick={() => {
-                        const updated = newServices.filter((_, i) => i !== idx);
-                        setNewServices(updated);
-                        setNewNoOfServices(updated.length);
-                      }} style={{ background: "transparent", border: "none", color: "#cc5555", cursor: "pointer", padding: 0, fontSize: "18px", lineHeight: 1, display: "flex", alignItems: "center" }}>&times;</button>
-                    </span>
+                    <div key={idx} style={{
+                      display: "flex", alignItems: "center", gap: "8px",
+                      background: "#fcf9f2", border: "1px solid #c4a060",
+                      padding: "6px 10px", borderRadius: "4px"
+                    }}>
+                      <span style={{ flex: 1, fontSize: "15px", fontWeight: 500, color: "#1a1a1a" }}>{s.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <span style={{ fontSize: "14px", color: "#666" }}>₹</span>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={s.price === 0 ? "" : s.price}
+                          onChange={(e) => {
+                            const val: number | "" = e.target.value === "" ? "" : Number(e.target.value);
+                            const updated = newServices.map((item, i) => i === idx ? { ...item, price: val } : item);
+                            setNewServices(updated);
+                            const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                            setNewTotalPrice(newTotal === 0 ? "" : newTotal);
+                          }}
+                          style={{
+                            width: "80px", padding: "4px 6px",
+                            border: "1px solid #c4a060", borderRadius: "4px",
+                            fontFamily: "'EB Garamond', serif", fontSize: "15px"
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = newServices.filter((_, i) => i !== idx);
+                          setNewServices(updated);
+                          setNewNoOfServices(updated.length === 0 ? "" : updated.length);
+                          const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                          setNewTotalPrice(newTotal === 0 ? "" : newTotal);
+                        }}
+                        style={{
+                          background: "transparent", border: "none",
+                          color: "#cc5555", cursor: "pointer", padding: "0 4px",
+                          fontSize: "18px", lineHeight: 1
+                        }}
+                        title="Remove service"
+                      >
+                        &times;
+                      </button>
+                    </div>
                   ))}
                 </div>
+              ) : (
+                <div style={{ fontSize: "14px", color: "#888", fontStyle: "italic", padding: "2px 0" }}>
+                  No services added yet. Add one below:
+                </div>
               )}
-              
-              <select 
-                value="" 
-                onChange={e => {
-                  if (e.target.value) {
-                    const updated = [...newServices, e.target.value];
-                    setNewServices(updated);
-                    setNewNoOfServices(updated.length);
-                  }
-                }} 
-                style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
-              >
-                <option value="">-- Add a Service --</option>
-                {serviceOptions.map(o => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
+
+              {/* Add a service row */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#fdfbf7", border: "1px dashed #c4a060", padding: "10px", borderRadius: "4px" }}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <select 
+                    value={selectedServiceOption} 
+                    onChange={e => setSelectedServiceOption(e.target.value)}
+                    style={{ flex: 1, padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif", background: "#fff" }}
+                  >
+                    <option value="">-- Select Service --</option>
+                    {serviceOptions.map(o => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                    <span style={{ fontSize: "14px", color: "#666" }}>₹</span>
+                    <input 
+                      type="number"
+                      placeholder="0"
+                      value={newServicePrice}
+                      onChange={e => setNewServicePrice(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "75px", padding: "8px 6px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif" }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedServiceOption) return;
+                      let sName = selectedServiceOption === "Custom" ? (customServiceName.trim() || "Custom Service") : selectedServiceOption;
+                      const addOns: string[] = [];
+                      if (includeHairstyle && !sName.includes("Hairstyle")) addOns.push("Hairstyle");
+                      if (includeLens && !sName.includes("Lens")) addOns.push("Lens");
+                      if (includeLashes && !sName.includes("Lashes")) addOns.push("Lashes");
+                      if (addOns.length > 0) sName += " + " + addOns.join(" + ");
+
+                      const sPrice: number | "" = newServicePrice === "" ? "" : Number(newServicePrice);
+                      const newItem: ServiceItem = { name: sName, date: newBookingDate || "", price: sPrice, qty: 1 };
+                      const updated = [...newServices, newItem];
+                      setNewServices(updated);
+                      setNewNoOfServices(updated.length);
+                      const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                      setNewTotalPrice(newTotal === 0 ? "" : newTotal);
+                      setSelectedServiceOption("");
+                      setNewServicePrice("");
+                      setCustomServiceName("");
+                      setIncludeHairstyle(true);
+                      setIncludeLens(true);
+                      setIncludeLashes(true);
+                    }}
+                    style={{
+                      padding: "8px 12px", background: "#a27022", color: "#fff",
+                      border: "none", borderRadius: "4px", cursor: "pointer",
+                      fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap"
+                    }}
+                  >
+                    + Add
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", margin: "2px 0" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={includeHairstyle} 
+                      onChange={e => setIncludeHairstyle(e.target.checked)} 
+                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
+                    />
+                    + Hairstyle
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={includeLens} 
+                      onChange={e => setIncludeLens(e.target.checked)} 
+                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
+                    />
+                    + Lens
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
+                    <input 
+                      type="checkbox" 
+                      checked={includeLashes} 
+                      onChange={e => setIncludeLashes(e.target.checked)} 
+                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
+                    />
+                    + Lashes
+                  </label>
+                </div>
+
+                {selectedServiceOption === "Custom" && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom service name..."
+                    value={customServiceName}
+                    onChange={e => setCustomServiceName(e.target.value)}
+                    style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif", background: "#fff" }}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="cd-form-row">
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>No. of Services Count</label>
-                <input type="number" value={newNoOfServices} onChange={e => setNewNoOfServices(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newNoOfServices === 0 ? "" : newNoOfServices}
+                  onChange={e => setNewNoOfServices(e.target.value === "" ? "" : Number(e.target.value))}
+                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Travel Amount (₹)</label>
-                <input type="number" value={newTravelAmount} onChange={e => setNewTravelAmount(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newTravelAmount === 0 ? "" : newTravelAmount}
+                  onChange={e => setNewTravelAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
+                />
               </div>
             </div>
 
             <div className="cd-form-row">
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Total Price (₹)</label>
-                <input type="number" value={newTotalPrice} onChange={e => setNewTotalPrice(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newTotalPrice === 0 ? "" : newTotalPrice}
+                  onChange={e => setNewTotalPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
                 <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Received Money (₹)</label>
-                <input type="number" value={newAdvance} onChange={e => setNewAdvance(Number(e.target.value))} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newAdvance === 0 ? "" : newAdvance}
+                  onChange={e => setNewAdvance(e.target.value === "" ? "" : Number(e.target.value))}
+                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
+                />
               </div>
             </div>
 
@@ -553,11 +797,25 @@ export default function MakeupData() {
               <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Phone No.</strong>{viewingRecord.phone || '-'}</div>
               <div><strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Email</strong>{viewingRecord.email || '-'}</div>
               <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px" }}>
-                <strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Services Taken ({viewingRecord.noOfServices})</strong>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
-                  {viewingRecord.services ? viewingRecord.services.split(',').map((s, i) => (
-                    <span key={i} style={{ background: "#fcf9f2", border: "1px solid #e0d5c1", padding: "4px 10px", borderRadius: "16px", fontSize: "14px", color: "#666" }}>{s.trim()}</span>
-                  )) : '-'}
+                <strong style={{ color: "#a27022", display: "block", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Services Taken ({viewingRecord.noOfServices})</strong>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {parseServices(viewingRecord.services).length > 0 ? (
+                    parseServices(viewingRecord.services).map((s, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fcf9f2", border: "1px solid #e0d5c1", padding: "6px 12px", borderRadius: "4px", fontSize: "14px" }}>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{s.name}</span>
+                          {(s.date || s.qty) && (
+                            <span style={{ fontSize: "12px", color: "#666" }}>
+                              {s.date ? s.date : ""} {s.date ? " • " : ""}Qty: {s.qty || 1}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ color: "#a27022", fontWeight: "bold" }}>₹{Number(s.price).toLocaleString("en-IN")}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span style={{ color: "#999", fontStyle: "italic" }}>No services listed</span>
+                  )}
                 </div>
               </div>
               <div style={{ gridColumn: "1 / -1", borderTop: "1px dashed #eee", paddingTop: "16px", display: "flex", justifyContent: "space-between" }}>
@@ -571,10 +829,11 @@ export default function MakeupData() {
               </div>
             </div>
             
-            <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+            <div style={{ display: "flex", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
               <button onClick={() => { setConfirmAction({ type: 'edit', recordId: viewingRecord.id, record: viewingRecord }); setViewingRecord(null); }} style={{ flex: 1, padding: "12px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "6px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Edit Booking</button>
+              <button onClick={() => generateMakeupPDF(viewingRecord)} style={{ flex: 1, padding: "12px", background: "#a27022", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>📄 Download Invoice</button>
               {((viewingRecord.totalPrice + (viewingRecord.travelAmount || 0)) - viewingRecord.advance) > 0 && (
-                <button onClick={() => handlePaymentSettled(viewingRecord)} style={{ flex: 1, padding: "12px", background: "#3a7a3a", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Payment Settled</button>
+                <button onClick={() => handlePaymentSettled(viewingRecord)} style={{ flex: "1 1 100%", padding: "12px", background: "#3a7a3a", border: "none", borderRadius: "6px", cursor: "pointer", color: "#fff", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "15px" }}>Payment Settled</button>
               )}
             </div>
           </div>

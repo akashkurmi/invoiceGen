@@ -678,7 +678,12 @@ export default function GayatriCollection() {
           letter-spacing: 1px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
+          .gc-wrapper { padding: 8px 0 24px 0 !important; background: #ffffff !important; }
+          .gc-card { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 16px 12px 24px 12px !important; box-shadow: none !important; border-radius: 0 !important; }
+          .gc-title-bar { padding: 0 12px; margin-bottom: 12px; }
+          .gc-controls { flex-direction: column !important; align-items: stretch !important; width: 100% !important; padding: 0 12px; gap: 8px; }
+          .gc-btn { width: 100% !important; text-align: center !important; }
           .gc-meta { grid-template-columns: 1fr !important; gap: 16px !important; }
           .gc-meta-row.full-width { grid-column: span 1 !important; }
           .gc-summary-table { width: 100% !important; }
