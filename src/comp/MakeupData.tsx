@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './Template.css';
 import { generateMakeupPDF } from '../utils/pdfGenerator.js';
 
@@ -87,6 +87,26 @@ const serviceOptions = [
   "Dramatic Makeup", "Custom"
 ];
 
+const defaultServicePrices: Record<string, number> = {
+  "Bridal Makeup": 10000,
+  "Bride Phere Makeup": 8000,
+  "Haldi Makeup": 5000,
+  "Engagement Makeup": 8000,
+  "Sangeet Makeup": 6000,
+  "Basic Makeup": 3000,
+  "Groom Makeup": 3000,
+  "Nude/Basic Makeup": 4000,
+  "Matte Makeup": 5000,
+  "HD Makeup": 8000,
+  "Dewy Makeup": 7000,
+  "Airbrush Makeup": 12000,
+  "Sweat Proof Makeup": 2000,
+  "3D Makeup": 9000,
+  "No Makeup Look": 4000,
+  "Glossy Makeup": 6000,
+  "Dramatic Makeup": 7000,
+};
+
 export default function MakeupData() {
   const [data, setData] = useState<MakeupRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,8 +155,17 @@ export default function MakeupData() {
   const [includeHairstyle, setIncludeHairstyle] = useState<boolean>(true);
   const [includeLens, setIncludeLens] = useState<boolean>(true);
   const [includeLashes, setIncludeLashes] = useState<boolean>(true);
-  const [newNoOfServices, setNewNoOfServices] = useState<number | "">("");
   const [newTravelAmount, setNewTravelAmount] = useState<number | "">("");
+
+  const [newServiceDate, setNewServiceDate] = useState<string>("");
+  const [newServiceQty, setNewServiceQty] = useState<number>(1);
+  const [serviceAddError, setServiceAddError] = useState<string>("");
+
+  // Validation State (Matching Anjali Makeover & Calendar forms)
+  const [modalErrors, setModalErrors] = useState<{ client?: string; bookingDate?: string; phone?: string; services?: string }>({});
+  const [modalErrorList, setModalErrorList] = useState<string[]>([]);
+  const [modalHasSubmitted, setModalHasSubmitted] = useState<boolean>(false);
+  const modalBoxRef = useRef<HTMLDivElement>(null);
   
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -158,6 +187,83 @@ export default function MakeupData() {
     }
   }, [viewingRecord, showAddPopup, confirmAction]);
 
+  // Validation (Matching Anjali Makeover form rules)
+  // - Client name is required
+  // - Date is required
+  // - Phone no. is required and 10 digits only
+  // - Quantity greater than 0 and date of every service required
+  // Without this validation form cannot be submitted
+  const validateModalForm = useCallback((
+    cName = newClientName,
+    bDate = newBookingDate,
+    ph = newPhone,
+    svcs = newServices
+  ): { errors: { client?: string; bookingDate?: string; phone?: string; services?: string }; list: string[] } => {
+    const errs: { client?: string; bookingDate?: string; phone?: string; services?: string } = {};
+    const list: string[] = [];
+
+    // 1. Client name is required
+    if (!cName || !cName.trim()) {
+      errs.client = "Client name is required";
+      list.push("Client name is required");
+    }
+
+    // 2. Date is required
+    if (!bDate || !bDate.trim()) {
+      errs.bookingDate = "Date is required";
+      list.push("Date is required");
+    }
+
+    // 3. Phone no. is required and 10 digits only
+    const digitsOnly = (ph || "").replace(/\D/g, "");
+    if (!ph || !ph.trim()) {
+      errs.phone = "Phone number is required (10 digits)";
+      list.push("Phone number is required (10 digits)");
+    } else if (digitsOnly.length !== 10) {
+      errs.phone = "Phone number must be exactly 10 digits";
+      list.push("Phone number must be exactly 10 digits");
+    }
+
+    // 4. Quantity greater than 0 and date of every service required
+    if (!svcs || svcs.length === 0) {
+      errs.services = "At least one service is required";
+      list.push("At least one service is required");
+    } else {
+      let hasDateErr = false;
+      let hasQtyErr = false;
+
+      svcs.forEach((s) => {
+        if (!s.date || !s.date.trim()) {
+          hasDateErr = true;
+        }
+        const q = typeof s.qty === "number" ? s.qty : Number(s.qty);
+        if (s.qty === "" || isNaN(q) || q <= 0) {
+          hasQtyErr = true;
+        }
+      });
+
+      if (hasDateErr) {
+        errs.services = "Date is required for every service";
+        list.push("Date is required for every service");
+      }
+      if (hasQtyErr) {
+        if (!errs.services) errs.services = "Quantity must be greater than 0 for every service";
+        list.push("Quantity must be greater than 0 for every service");
+      }
+    }
+
+    return { errors: errs, list };
+  }, [newClientName, newBookingDate, newPhone, newServices]);
+
+  // Live validation updates after first submit attempt
+  useEffect(() => {
+    if (modalHasSubmitted) {
+      const { errors, list } = validateModalForm();
+      setModalErrors(errors);
+      setModalErrorList(list);
+    }
+  }, [modalHasSubmitted, validateModalForm]);
+
   const resetForm = () => {
     setEditingId(null);
     setNewClientName("");
@@ -174,28 +280,43 @@ export default function MakeupData() {
     setIncludeHairstyle(true);
     setIncludeLens(true);
     setIncludeLashes(true);
-    setNewNoOfServices("");
     setNewTravelAmount("");
+    setNewServiceDate("");
+    setNewServiceQty(1);
+    setServiceAddError("");
+    setModalErrors({});
+    setModalErrorList([]);
+    setModalHasSubmitted(false);
   };
 
   const handleSubmit = async () => {
-    if (!newClientName || !newBookingDate) return;
+    const { errors, list } = validateModalForm();
+    setModalErrors(errors);
+    setModalErrorList(list);
+    setModalHasSubmitted(true);
+
+    if (list.length > 0) {
+      if (modalBoxRef.current) {
+        modalBoxRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      return;
+    }
     
     const payload = {
-      clientName: newClientName,
-      phone: newPhone,
-      email: newEmail,
-      bookingDate: newBookingDate,
+      clientName: newClientName.trim(),
+      phone: newPhone.replace(/\D/g, "").slice(0, 10),
+      email: newEmail.trim(),
+      bookingDate: newBookingDate.trim(),
       advance: Number(newAdvance) || 0,
       totalPrice: Number(newTotalPrice) || 0,
-      venue: newVenue,
+      venue: newVenue.trim(),
       services: JSON.stringify(newServices.map(s => ({
         name: s.name,
-        date: s.date || newBookingDate,
+        date: s.date || newBookingDate.trim(),
         qty: Number(s.qty) || 1,
         price: Number(s.price) || 0
       }))),
-      noOfServices: Number(newNoOfServices) || newServices.length || 1,
+      noOfServices: newServices.length || 1,
       travelAmount: Number(newTravelAmount) || 0
     };
 
@@ -237,6 +358,62 @@ export default function MakeupData() {
     resetForm();
   };
 
+  const handleAddServiceItem = () => {
+    if (!selectedServiceOption) {
+      setServiceAddError("Please select a service name.");
+      return;
+    }
+    const sName = selectedServiceOption === "Custom" ? customServiceName.trim() : selectedServiceOption.trim();
+    if (!sName) {
+      setServiceAddError("Please enter custom service name.");
+      return;
+    }
+
+    const sDate = (newServiceDate || newBookingDate || new Date().toISOString().split("T")[0]).trim();
+    if (!sDate) {
+      setServiceAddError("Service date is required.");
+      return;
+    }
+
+    const sQty = Number(newServiceQty);
+    if (!newServiceQty || isNaN(sQty) || sQty <= 0) {
+      setServiceAddError("Quantity must be greater than 0.");
+      return;
+    }
+
+    setServiceAddError("");
+
+    let finalName = sName;
+    const addOns: string[] = [];
+    if (includeHairstyle && !finalName.toLowerCase().includes("hairstyle")) addOns.push("Hairstyle");
+    if (includeLens && !finalName.toLowerCase().includes("lens")) addOns.push("Lens");
+    if (includeLashes && !finalName.toLowerCase().includes("lashes")) addOns.push("Lashes");
+    if (addOns.length > 0) finalName += " + " + addOns.join(" + ");
+
+    const sPrice: number | "" = newServicePrice === "" ? 0 : Number(newServicePrice);
+    const newItem: ServiceItem = { name: finalName, date: sDate, price: sPrice, qty: sQty };
+    const updated = [...newServices, newItem];
+    setNewServices(updated);
+
+    const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    setNewTotalPrice(newTotal === 0 ? "" : newTotal);
+
+    setSelectedServiceOption("");
+    setNewServicePrice("");
+    setCustomServiceName("");
+    setNewServiceQty(1);
+    setIncludeHairstyle(true);
+    setIncludeLens(true);
+    setIncludeLashes(true);
+  };
+
+  const handleRemoveServiceItem = (idx: number) => {
+    const updated = newServices.filter((_, i) => i !== idx);
+    setNewServices(updated);
+    const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    setNewTotalPrice(newTotal === 0 ? "" : newTotal);
+  };
+
   const executeConfirmAction = async () => {
     if (!confirmAction) return;
     
@@ -252,8 +429,16 @@ export default function MakeupData() {
       setNewEmail(record.email || "");
       const parsedServices = parseServices(record.services);
       setNewServices(parsedServices);
-      setNewNoOfServices(record.noOfServices === 0 ? "" : (record.noOfServices || parsedServices.length));
       setNewTravelAmount(record.travelAmount === 0 ? "" : (record.travelAmount || ""));
+      setNewServiceDate(record.bookingDate || new Date().toISOString().split("T")[0]);
+      setNewServiceQty(1);
+      setIncludeHairstyle(true);
+      setIncludeLens(true);
+      setIncludeLashes(true);
+      setServiceAddError("");
+      setModalErrors({});
+      setModalErrorList([]);
+      setModalHasSubmitted(false);
       setShowAddPopup(true);
     } else if (confirmAction.type === 'delete') {
       const id = confirmAction.recordId;
@@ -327,6 +512,82 @@ export default function MakeupData() {
         .cd-table td { padding: 16px; color: #555; }
         .cd-table tr { border-bottom: 1px solid #eee; }
         .cd-form-row { display: flex; gap: 12px; }
+        .cd-form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        
+        .cd-modal-backdrop {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: rgba(0,0,0,0.6);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(4px);
+          padding: 16px;
+        }
+        .cd-modal-box {
+          background: #ffffff;
+          border-radius: 10px;
+          border: 1px solid #c4a060;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          padding: 24px;
+          width: 100%;
+          max-width: 520px;
+          max-height: 92vh;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          font-family: 'EB Garamond', serif;
+          color: #1a1a1a;
+          box-sizing: border-box;
+        }
+        .cd-input-field {
+          padding: 8px 10px;
+          border: 1px solid #c4a060;
+          border-radius: 4px;
+          font-family: 'EB Garamond', serif;
+          font-size: 15px;
+          color: #1a1a1a;
+          background: #ffffff;
+          outline: none;
+          width: 100%;
+          box-sizing: border-box;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .cd-input-field:focus {
+          border-color: #a27022;
+          box-shadow: 0 0 0 2px rgba(162, 112, 34, 0.2);
+        }
+        .cd-input-error {
+          border-color: #c62828 !important;
+          background-color: #feecec !important;
+        }
+        .cd-input-error:focus {
+          box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.2) !important;
+        }
+        .cd-service-add-card {
+          background: #fdfbf7;
+          border: 1px solid #c4a060;
+          border-radius: 6px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          box-sizing: border-box;
+        }
+        .cd-service-item-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #ffffff;
+          border: 1px solid #e0d5c1;
+          border-radius: 4px;
+          padding: 8px 10px;
+          gap: 8px;
+          box-sizing: border-box;
+        }
         
         @media (max-width: 768px) {
           .cd-container { padding: 12px 4px; }
@@ -339,7 +600,32 @@ export default function MakeupData() {
           .cd-table { min-width: 600px; font-size: 14px; }
           .cd-table th, .cd-table td { padding: 10px 8px; }
           
-          .cd-form-row { flex-direction: column; gap: 12px; }
+          .cd-modal-box {
+            padding: 16px 12px;
+            max-height: 94vh;
+            gap: 12px;
+          }
+          .cd-form-row { flex-direction: column; gap: 10px; }
+          .cd-form-row-3 {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+          .cd-form-row-3 > div:last-child {
+            grid-column: span 2;
+          }
+          .cd-service-add-card {
+            padding: 10px 8px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .cd-modal-box {
+            padding: 14px 10px;
+          }
+          .cd-service-item-card {
+            padding: 6px 8px;
+            font-size: 13px;
+          }
         }
       `}</style>
       
@@ -381,6 +667,9 @@ export default function MakeupData() {
         <button 
           onClick={() => {
             resetForm();
+            const today = new Date().toISOString().split("T")[0];
+            setNewBookingDate(today);
+            setNewServiceDate(today);
             setShowAddPopup(true);
           }}
           className="cd-btn-add"
@@ -458,267 +747,409 @@ export default function MakeupData() {
       </div>
 
       {showAddPopup && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
-          justifyContent: "center", alignItems: "center", zIndex: 1000
-        }}>
-          <div style={{
-            background: "#fff", padding: "24px", borderRadius: "8px",
-            width: "90%", maxWidth: "450px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            display: "flex", flexDirection: "column", gap: "16px",
-            fontFamily: "'EB Garamond', serif", color: "#1a1a1a"
-          }}>
-            <h3 style={{ margin: 0, color: "#a27022", fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600 }}>
-              {editingId ? "Edit Booking" : "Add New Booking"}
-            </h3>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Client Name</label>
-              <input value={newClientName} onChange={e => setNewClientName(e.target.value)} placeholder="e.g. Seeta patel" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+        <div className="cd-modal-backdrop" onClick={() => setShowAddPopup(false)}>
+          <div className="cd-modal-box" ref={modalBoxRef} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #eee", paddingBottom: "12px" }}>
+              <h3 style={{ margin: 0, color: "#a27022", fontFamily: "'Cinzel', serif", fontSize: "20px", fontWeight: 700 }}>
+                {editingId ? "Edit Booking" : "Add New Booking"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddPopup(false)}
+                style={{ background: "none", border: "none", fontSize: "26px", cursor: "pointer", color: "#999", lineHeight: 1 }}
+              >
+                &times;
+              </button>
             </div>
 
-            <div className="cd-form-row">
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Phone (Optional)</label>
-                <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+91 00000 00000" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
+            {/* Error Banner when validation fails */}
+            {modalHasSubmitted && modalErrorList.length > 0 && (
+              <div style={{
+                background: "#feecec",
+                border: "1px solid #f5c2c7",
+                borderRadius: "8px",
+                padding: "10px 14px",
+                color: "#842029",
+                fontSize: "13px"
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>⚠️</span>
+                  <span>Please fix the following errors before submitting:</span>
+                </div>
+                <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>
+                  {modalErrorList.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Email (Optional)</label>
-                <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="example@email.com" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-              </div>
-            </div>
+            )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Booking Date</label>
-              <input type="date" value={newBookingDate} onChange={e => setNewBookingDate(e.target.value)} style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>
-                  Services Taken ({newServices.length})
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "14px" }}>
+              {/* Client Name */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                  Client Name *
                 </label>
-                {newServices.length > 0 && (
-                  <span style={{ fontSize: "13px", color: "#a27022", fontWeight: 600 }}>
-                    Services Total: ₹{newServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)}
+                <input
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  placeholder="e.g. Seeta Patel"
+                  className={`cd-input-field ${modalErrors.client ? "cd-input-error" : ""}`}
+                />
+                {modalErrors.client && (
+                  <span style={{ color: "#c62828", fontSize: "12px", marginTop: "2px" }}>
+                    {modalErrors.client}
                   </span>
                 )}
               </div>
-              
-              {newServices.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "150px", overflowY: "auto", paddingRight: "4px" }}>
-                  {newServices.map((s, idx) => (
-                    <div key={idx} style={{
-                      display: "flex", alignItems: "center", gap: "8px",
-                      background: "#fcf9f2", border: "1px solid #c4a060",
-                      padding: "6px 10px", borderRadius: "4px"
-                    }}>
-                      <span style={{ flex: 1, fontSize: "15px", fontWeight: 500, color: "#1a1a1a" }}>{s.name}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <span style={{ fontSize: "14px", color: "#666" }}>₹</span>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={s.price === 0 ? "" : s.price}
-                          onChange={(e) => {
-                            const val: number | "" = e.target.value === "" ? "" : Number(e.target.value);
-                            const updated = newServices.map((item, i) => i === idx ? { ...item, price: val } : item);
-                            setNewServices(updated);
-                            const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                            setNewTotalPrice(newTotal === 0 ? "" : newTotal);
-                          }}
-                          style={{
-                            width: "80px", padding: "4px 6px",
-                            border: "1px solid #c4a060", borderRadius: "4px",
-                            fontFamily: "'EB Garamond', serif", fontSize: "15px"
-                          }}
-                        />
+
+              {/* Booking Date & Phone */}
+              <div className="cd-form-row">
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Booking Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newBookingDate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewBookingDate(val);
+                      if (!newServiceDate || newServiceDate === newBookingDate) {
+                        setNewServiceDate(val);
+                      }
+                    }}
+                    className={`cd-input-field ${modalErrors.bookingDate ? "cd-input-error" : ""}`}
+                  />
+                  {modalErrors.bookingDate && (
+                    <span style={{ color: "#c62828", fontSize: "12px", marginTop: "2px" }}>
+                      {modalErrors.bookingDate}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Phone No. (10 digits) *
+                  </label>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="10-digit mobile number"
+                    className={`cd-input-field ${modalErrors.phone ? "cd-input-error" : ""}`}
+                  />
+                  {modalErrors.phone && (
+                    <span style={{ color: "#c62828", fontSize: "12px", marginTop: "2px" }}>
+                      {modalErrors.phone}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Venue & Email */}
+              <div className="cd-form-row">
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Venue (Optional)
+                  </label>
+                  <input
+                    value={newVenue}
+                    onChange={(e) => setNewVenue(e.target.value)}
+                    placeholder="e.g. Grand Hyatt"
+                    className="cd-input-field"
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Email (Optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="example@email.com"
+                    className="cd-input-field"
+                  />
+                </div>
+              </div>
+
+              {/* Services Section */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Services Taken ({newServices.length}) *
+                  </label>
+                  {modalErrors.services && (
+                    <span style={{ color: "#c62828", fontSize: "12px", fontWeight: 600 }}>
+                      ⚠️ {modalErrors.services}
+                    </span>
+                  )}
+                </div>
+
+                {/* Added Services List */}
+                {newServices.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "160px", overflowY: "auto", paddingRight: "2px" }}>
+                    {newServices.map((s, idx) => (
+                      <div key={idx} className="cd-service-item-card">
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0, flex: 1 }}>
+                          <span style={{ fontWeight: 600, color: "#1a1a1a", wordBreak: "break-word" }}>
+                            {s.name}
+                          </span>
+                          <span style={{ fontSize: "12px", color: "#666" }}>
+                            {s.date ? `📅 ${s.date}` : "⚠️ No date"} • Qty: {s.qty || 1}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          <strong style={{ color: "#a27022", fontSize: "14px" }}>
+                            ₹{Number(s.price || 0).toLocaleString("en-IN")}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveServiceItem(idx)}
+                            style={{
+                              background: "#feecec",
+                              border: "1px solid #f5c2c7",
+                              color: "#c62828",
+                              cursor: "pointer",
+                              borderRadius: "4px",
+                              width: "22px",
+                              height: "22px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "15px",
+                              fontWeight: "bold",
+                              padding: 0
+                            }}
+                            title="Remove service"
+                          >
+                            &times;
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = newServices.filter((_, i) => i !== idx);
-                          setNewServices(updated);
-                          setNewNoOfServices(updated.length === 0 ? "" : updated.length);
-                          const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                          setNewTotalPrice(newTotal === 0 ? "" : newTotal);
-                        }}
-                        style={{
-                          background: "transparent", border: "none",
-                          color: "#cc5555", cursor: "pointer", padding: "0 4px",
-                          fontSize: "18px", lineHeight: 1
-                        }}
-                        title="Remove service"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: "14px", color: "#888", fontStyle: "italic", padding: "2px 0" }}>
-                  No services added yet. Add one below:
-                </div>
-              )}
-
-              {/* Add a service row */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#fdfbf7", border: "1px dashed #c4a060", padding: "10px", borderRadius: "4px" }}>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <select 
-                    value={selectedServiceOption} 
-                    onChange={e => setSelectedServiceOption(e.target.value)}
-                    style={{ flex: 1, padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif", background: "#fff" }}
-                  >
-                    <option value="">-- Select Service --</option>
-                    {serviceOptions.map(o => (
-                      <option key={o} value={o}>{o}</option>
                     ))}
-                  </select>
+                  </div>
+                )}
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                    <span style={{ fontSize: "14px", color: "#666" }}>₹</span>
-                    <input 
-                      type="number"
-                      placeholder="0"
-                      value={newServicePrice}
-                      onChange={e => setNewServicePrice(e.target.value === "" ? "" : Number(e.target.value))}
-                      style={{ width: "75px", padding: "8px 6px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif" }}
-                    />
+                {/* Add Service Sub-card */}
+                <div className="cd-service-add-card">
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#a27022", fontFamily: "'Cinzel', serif" }}>
+                    + Add Service Item
+                  </span>
+
+                  {serviceAddError && (
+                    <div style={{
+                      background: "#fff5f5",
+                      border: "1px solid #f5c2c7",
+                      borderRadius: "6px",
+                      padding: "6px 10px",
+                      color: "#842029",
+                      fontSize: "12px",
+                      fontWeight: 500
+                    }}>
+                      ⚠️ {serviceAddError}
+                    </div>
+                  )}
+
+                  {/* Service Name Dropdown */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: 600, color: "#555" }}>Service Name</label>
+                    <select
+                      value={selectedServiceOption}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedServiceOption(val);
+                        if (val && val !== "Custom" && newServicePrice === "") {
+                          if (defaultServicePrices[val]) {
+                            setNewServicePrice(defaultServicePrices[val]);
+                          }
+                        }
+                        if (serviceAddError) setServiceAddError("");
+                      }}
+                      className="cd-input-field"
+                    >
+                      <option value="">-- Select Service --</option>
+                      {serviceOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedServiceOption) return;
-                      let sName = selectedServiceOption === "Custom" ? (customServiceName.trim() || "Custom Service") : selectedServiceOption;
-                      const addOns: string[] = [];
-                      if (includeHairstyle && !sName.includes("Hairstyle")) addOns.push("Hairstyle");
-                      if (includeLens && !sName.includes("Lens")) addOns.push("Lens");
-                      if (includeLashes && !sName.includes("Lashes")) addOns.push("Lashes");
-                      if (addOns.length > 0) sName += " + " + addOns.join(" + ");
+                  {selectedServiceOption === "Custom" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#555" }}>Custom Service Name</label>
+                      <input
+                        type="text"
+                        placeholder="Enter custom service"
+                        value={customServiceName}
+                        onChange={(e) => {
+                          setCustomServiceName(e.target.value);
+                          if (serviceAddError) setServiceAddError("");
+                        }}
+                        className="cd-input-field"
+                      />
+                    </div>
+                  )}
 
-                      const sPrice: number | "" = newServicePrice === "" ? "" : Number(newServicePrice);
-                      const newItem: ServiceItem = { name: sName, date: newBookingDate || "", price: sPrice, qty: 1 };
-                      const updated = [...newServices, newItem];
-                      setNewServices(updated);
-                      setNewNoOfServices(updated.length);
-                      const newTotal = updated.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                      setNewTotalPrice(newTotal === 0 ? "" : newTotal);
-                      setSelectedServiceOption("");
-                      setNewServicePrice("");
-                      setCustomServiceName("");
-                      setIncludeHairstyle(true);
-                      setIncludeLens(true);
-                      setIncludeLashes(true);
-                    }}
-                    style={{
-                      padding: "8px 12px", background: "#a27022", color: "#fff",
-                      border: "none", borderRadius: "4px", cursor: "pointer",
-                      fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap"
-                    }}
-                  >
-                    + Add
-                  </button>
+                  {/* Service Date & Qty Row */}
+                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1, minWidth: 0 }}>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#555" }}>Service Date *</label>
+                      <input
+                        type="date"
+                        value={newServiceDate}
+                        onChange={(e) => {
+                          setNewServiceDate(e.target.value);
+                          if (serviceAddError) setServiceAddError("");
+                        }}
+                        className="cd-input-field"
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", width: "85px", flexShrink: 0 }}>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#555", textAlign: "center" }}>Qty *</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newServiceQty}
+                        onChange={(e) => {
+                          setNewServiceQty(e.target.value === "" ? ("" as unknown as number) : Number(e.target.value));
+                          if (serviceAddError) setServiceAddError("");
+                        }}
+                        className="cd-input-field"
+                        style={{ textAlign: "center" }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Price & Add Button Row */}
+                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-end" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1, minWidth: 0 }}>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#555" }}>Price (₹)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={newServicePrice}
+                        onChange={(e) => setNewServicePrice(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="cd-input-field"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddServiceItem}
+                      style={{
+                        padding: "8px 16px", height: "38px", whiteSpace: "nowrap", flexShrink: 0,
+                        background: "#a27022", color: "#fff", border: "none", borderRadius: "4px",
+                        cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "13px"
+                      }}
+                    >
+                      + Add Service
+                    </button>
+                  </div>
+
+                  {/* Add-on Checkboxes */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#666" }}>Add-on Options:</span>
+                    <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#333" }}>
+                        <input
+                          type="checkbox"
+                          checked={includeHairstyle}
+                          onChange={(e) => setIncludeHairstyle(e.target.checked)}
+                          style={{ accentColor: "#a27022", width: "16px", height: "16px", cursor: "pointer" }}
+                        />
+                        + Hairstyle
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#333" }}>
+                        <input
+                          type="checkbox"
+                          checked={includeLens}
+                          onChange={(e) => setIncludeLens(e.target.checked)}
+                          style={{ accentColor: "#a27022", width: "16px", height: "16px", cursor: "pointer" }}
+                        />
+                        + Lens
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#333" }}>
+                        <input
+                          type="checkbox"
+                          checked={includeLashes}
+                          onChange={(e) => setIncludeLashes(e.target.checked)}
+                          style={{ accentColor: "#a27022", width: "16px", height: "16px", cursor: "pointer" }}
+                        />
+                        + Lashes
+                      </label>
+                    </div>
+                  </div>
                 </div>
+              </div>
 
-                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", margin: "2px 0" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
-                    <input 
-                      type="checkbox" 
-                      checked={includeHairstyle} 
-                      onChange={e => setIncludeHairstyle(e.target.checked)} 
-                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
-                    />
-                    + Hairstyle
+              {/* Financial Inputs Row */}
+              <div className="cd-form-row-3">
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Total Price (₹)
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
-                    <input 
-                      type="checkbox" 
-                      checked={includeLens} 
-                      onChange={e => setIncludeLens(e.target.checked)} 
-                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
-                    />
-                    + Lens
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#444" }}>
-                    <input 
-                      type="checkbox" 
-                      checked={includeLashes} 
-                      onChange={e => setIncludeLashes(e.target.checked)} 
-                      style={{ cursor: "pointer", accentColor: "#a27022" }} 
-                    />
-                    + Lashes
-                  </label>
-                </div>
-
-                {selectedServiceOption === "Custom" && (
                   <input
-                    type="text"
-                    placeholder="Enter custom service name..."
-                    value={customServiceName}
-                    onChange={e => setCustomServiceName(e.target.value)}
-                    style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "15px", fontFamily: "'EB Garamond', serif", background: "#fff" }}
+                    type="number"
+                    placeholder="0"
+                    value={newTotalPrice === 0 ? "" : newTotalPrice}
+                    onChange={(e) => setNewTotalPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="cd-input-field"
                   />
-                )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Received Money (₹)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={newAdvance === 0 ? "" : newAdvance}
+                    onChange={(e) => setNewAdvance(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="cd-input-field"
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "bold", fontFamily: "'Cinzel', serif", color: "#a27022" }}>
+                    Travel Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={newTravelAmount === 0 ? "" : newTravelAmount}
+                    onChange={(e) => setNewTravelAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="cd-input-field"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="cd-form-row">
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>No. of Services Count</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newNoOfServices === 0 ? "" : newNoOfServices}
-                  onChange={e => setNewNoOfServices(e.target.value === "" ? "" : Number(e.target.value))}
-                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Travel Amount (₹)</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newTravelAmount === 0 ? "" : newTravelAmount}
-                  onChange={e => setNewTravelAmount(e.target.value === "" ? "" : Number(e.target.value))}
-                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
-                />
-              </div>
-            </div>
-
-            <div className="cd-form-row">
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Total Price (₹)</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newTotalPrice === 0 ? "" : newTotalPrice}
-                  onChange={e => setNewTotalPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Received Money (₹)</label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newAdvance === 0 ? "" : newAdvance}
-                  onChange={e => setNewAdvance(e.target.value === "" ? "" : Number(e.target.value))}
-                  style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", fontFamily: "'Cinzel', serif" }}>Venue (Optional)</label>
-              <input value={newVenue} onChange={e => setNewVenue(e.target.value)} placeholder="e.g. Grand Hyatt" style={{ padding: "8px", border: "1px solid #c4a060", borderRadius: "4px", fontSize: "16px", fontFamily: "'EB Garamond', serif" }} />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
-              <button onClick={() => setShowAddPopup(false)} style={{ padding: "8px 16px", background: "#fcf9f2", border: "1px solid #c4a060", borderRadius: "2px", cursor: "pointer", color: "#a27022", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleSubmit} style={{ padding: "8px 16px", background: "#a27022", color: "#fff", border: "none", borderRadius: "2px", cursor: "pointer", fontFamily: "'Cinzel', serif", fontWeight: 600 }}>
-                {editingId ? "Save Changes" : "Create"}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", borderTop: "1px solid #eee", paddingTop: "12px", marginTop: "4px" }}>
+              <button
+                type="button"
+                onClick={() => setShowAddPopup(false)}
+                style={{
+                  padding: "8px 16px", background: "#fcf9f2", border: "1px solid #c4a060",
+                  borderRadius: "4px", cursor: "pointer", color: "#a27022",
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "14px"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                style={{
+                  padding: "8px 16px", background: "#a27022", color: "#fff",
+                  border: "none", borderRadius: "4px", cursor: "pointer",
+                  fontFamily: "'Cinzel', serif", fontWeight: 600, fontSize: "14px"
+                }}
+              >
+                {editingId ? "Save Changes" : "Create Booking"}
               </button>
             </div>
           </div>

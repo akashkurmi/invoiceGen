@@ -4,6 +4,7 @@ import GayatriCollection from "./comp/Template/gayatriCollection.js";
 import AnjalMakeoverInvoice from "./comp/templateNewClaud.js";
 import CollectionData from "./comp/CollectionData.js";
 import MakeupData from "./comp/MakeupData.js";
+import MakeupCalendar from "./comp/MakeupCalendar.js";
 
 function App() {
   const [selectedTemplate, setSelectedTemplate] = useState("Gayatri");
@@ -22,6 +23,7 @@ function App() {
           <option value="Anjali">Anjali Makeover</option>
           <option value="CollectionData">Collection Data</option>
           <option value="MakeupData">Makeup Bookings Data</option>
+          <option value="Calendar">Calendar</option>
         </select>
       </div>
 
@@ -33,6 +35,7 @@ function App() {
         {selectedTemplate === "Anjali" && <AnjalMakeoverInvoice />}
         {selectedTemplate === "CollectionData" && <CollectionData />}
         {selectedTemplate === "MakeupData" && <MakeupData />}
+        {selectedTemplate === "Calendar" && <MakeupCalendar onNavigate={(view) => setSelectedTemplate(view)} />}
       </div>
     </div>
   );
