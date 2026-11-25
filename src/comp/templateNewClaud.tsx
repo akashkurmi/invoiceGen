@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import jsPDF from "jspdf";
 import "./Template.css";
+import { formatDisplayDate } from "../utils/dateFormat.js";
 
 interface Service {
   id: number;
@@ -47,17 +48,6 @@ const serviceOptions = [
   "Custom"
 ];
 
-const formatDisplayDate = (d: string): string => {
-  if (!d) return "—";
-  const dt = new Date(d);
-  return isNaN(dt.getTime())
-    ? d
-    : dt.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-};
 
 export default function InvoiceGenerator() {
   const [client, setClient] = useState<string>("");

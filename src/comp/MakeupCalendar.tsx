@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import './MakeupCalendar.css';
 import { generateMakeupPDF } from '../utils/pdfGenerator.js';
+import { formatDisplayDate } from '../utils/dateFormat.js';
 
 export interface ServiceItem {
   name: string;
@@ -1449,7 +1450,7 @@ export default function MakeupCalendar({ onNavigate }: MakeupCalendarProps) {
                             <div key={idx} className="cal-daily-service-row">
                               <div>
                                 <span style={{ fontWeight: 600 }}>{s.name}</span>
-                                {s.date && <span style={{ fontSize: "12px", color: "#666", marginLeft: "6px" }}>({s.date})</span>}
+                                {s.date && <span style={{ fontSize: "12px", color: "#666", marginLeft: "6px" }}>({formatDisplayDate(s.date)})</span>}
                               </div>
                               <span style={{ fontWeight: 600, color: "var(--cal-gold-dark)" }}>
                                 Qty: {s.qty || 1} • ₹{Number(s.price || 0).toLocaleString("en-IN")}
@@ -1693,7 +1694,7 @@ export default function MakeupCalendar({ onNavigate }: MakeupCalendarProps) {
                   Booking Details
                 </h3>
                 <span style={{ fontSize: "14px", color: "#666" }}>
-                  ID: #{viewingRecord.id} • {viewingRecord.bookingDate}
+                  ID: #{viewingRecord.id} • {formatDisplayDate(viewingRecord.bookingDate)}
                 </span>
               </div>
               <button
@@ -1747,7 +1748,7 @@ export default function MakeupCalendar({ onNavigate }: MakeupCalendarProps) {
                     >
                       <div>
                         <span style={{ fontWeight: 600 }}>{s.name}</span>
-                        {s.date && <span style={{ fontSize: "12px", color: "#666", marginLeft: "6px" }}>({s.date})</span>}
+                        {s.date && <span style={{ fontSize: "12px", color: "#666", marginLeft: "6px" }}>({formatDisplayDate(s.date)})</span>}
                       </div>
                       <span style={{ color: "var(--cal-gold-dark)", fontWeight: "bold" }}>
                         Qty: {s.qty || 1} • ₹{Number(s.price || 0).toLocaleString("en-IN")}
@@ -1996,7 +1997,7 @@ export default function MakeupCalendar({ onNavigate }: MakeupCalendarProps) {
                             {s.name}
                           </span>
                           <span style={{ fontSize: "12px", color: "var(--cal-text-muted)" }}>
-                            {s.date ? `📅 ${s.date}` : "⚠️ No date"} • Qty: {s.qty || 1}
+                            {s.date ? `📅 ${formatDisplayDate(s.date)}` : "⚠️ No date"} • Qty: {s.qty || 1}
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>

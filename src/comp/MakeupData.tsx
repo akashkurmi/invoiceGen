@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import './Template.css';
 import { generateMakeupPDF } from '../utils/pdfGenerator.js';
+import { formatDisplayDate } from '../utils/dateFormat.js';
 
 export interface ServiceItem {
   name: string;
@@ -708,7 +709,7 @@ export default function MakeupData() {
                   >
                     <td data-label="S.No." style={{ fontWeight: "bold", color: "#666" }}>{index + 1}</td>
                     <td data-label="Client Name" style={{ fontWeight: 600 }}>{record.clientName}</td>
-                    <td data-label="Booking Date">{record.bookingDate}</td>
+                    <td data-label="Booking Date">{formatDisplayDate(record.bookingDate)}</td>
                     <td data-label="Count" style={{ textAlign: "center" }}>{record.noOfServices}</td>
                     <td data-label="Total Price" style={{ fontWeight: 600, color: "#1a1a1a" }}>₹{record.totalPrice}</td>
                     <td data-label="Pending Amount" style={{ fontWeight: 600, color: isPending ? "#cc5555" : "#666" }}>₹{pendingAmount}</td>
@@ -899,7 +900,7 @@ export default function MakeupData() {
                             {s.name}
                           </span>
                           <span style={{ fontSize: "12px", color: "#666" }}>
-                            {s.date ? `📅 ${s.date}` : "⚠️ No date"} • Qty: {s.qty || 1}
+                            {s.date ? `📅 ${formatDisplayDate(s.date)}` : "⚠️ No date"} • Qty: {s.qty || 1}
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
@@ -1237,7 +1238,7 @@ export default function MakeupData() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #eee", paddingBottom: "14px" }}>
               <div>
                 <h3 style={{ margin: "0 0 4px 0", color: "#a27022", fontFamily: "'Cinzel', serif", fontSize: "22px", fontWeight: 600 }}>Booking Details</h3>
-                <span style={{ fontSize: "14px", color: "#666" }}>ID: #{viewingRecord.id} • {viewingRecord.bookingDate}</span>
+                <span style={{ fontSize: "14px", color: "#666" }}>ID: #{viewingRecord.id} • {formatDisplayDate(viewingRecord.bookingDate)}</span>
               </div>
               <button onClick={() => setViewingRecord(null)} style={{ background: "none", border: "none", fontSize: "28px", cursor: "pointer", color: "#999", lineHeight: 1, padding: "0 4px" }}>&times;</button>
             </div>
@@ -1287,7 +1288,7 @@ export default function MakeupData() {
                                 <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{s.name}</span>
                                 {(s.date || s.qty) && (
                                   <span style={{ fontSize: "12px", color: "#666" }}>
-                                    {s.date ? s.date : ""} {s.date ? " • " : ""}Qty: {s.qty || 1}
+                                    {s.date ? formatDisplayDate(s.date) : ""} {s.date ? " • " : ""}Qty: {s.qty || 1}
                                   </span>
                                 )}
                               </div>
